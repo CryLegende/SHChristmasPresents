@@ -153,13 +153,13 @@ public class ClickerManager implements Listener {
     }
 
     public void createSnowman(Location loc) {
-        Snowman sm = (Snowman) loc.getWorld().spawnEntity(loc, EntityType.SNOWMAN);
+        Snowman sm = (Snowman) loc.getWorld().spawnEntity(loc, EntityType.SNOW_GOLEM);
         sm.setAI(false);
         sm.setCollidable(false);
         sm.setRemoveWhenFarAway(false);
         sm.setPersistent(true);
-        if (sm.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MAX_HEALTH) != null) {
-            sm.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MAX_HEALTH).setBaseValue(2048);
+        if (sm.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH) != null) {
+            sm.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(2048);
             sm.setHealth(2048);
         }
         sm.getPersistentDataContainer().set(CLICKER_KEY, PersistentDataType.BYTE, (byte) 1);
@@ -344,7 +344,7 @@ public class ClickerManager implements Listener {
         // Particules douces (Flocons)
         snowman.getWorld().spawnParticle(Particle.SNOWFLAKE, particleLoc, 7, 0.3, 0.4, 0.3, 0.05);
         // Particules d'impact (Boule de neige qui casse)
-        snowman.getWorld().spawnParticle(Particle.SNOWBALL, particleLoc, 3, 0.2, 0.2, 0.2, 0.1);
+        snowman.getWorld().spawnParticle(Particle.ITEM_SNOWBALL, particleLoc, 3, 0.2, 0.2, 0.2, 0.1);
     }
 
     private int calculateRequiredClicks(int targetLevel) {

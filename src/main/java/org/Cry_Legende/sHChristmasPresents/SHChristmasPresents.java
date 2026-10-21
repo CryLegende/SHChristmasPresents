@@ -386,7 +386,7 @@ public class SHChristmasPresents extends JavaPlugin implements Listener, Command
         else interaction.remove();
 
         Location loc = interaction.getLocation();
-        loc.getWorld().spawnParticle(Particle.REDSTONE, loc.add(0, 0.5, 0), 20, 0.5, 0.5, 0.5, new Particle.DustOptions(Color.RED, 1.5f));
+        loc.getWorld().spawnParticle(Particle.DUST, loc.add(0, 0.5, 0), 20, 0.5, 0.5, 0.5, new Particle.DustOptions(Color.RED, 1.5f));
         loc.getWorld().playSound(loc, Sound.ENTITY_CHICKEN_EGG, 1f, 1f);
         loc.getWorld().playSound(loc, Sound.BLOCK_AMETHYST_BLOCK_BREAK, 1f, 0.5f);
     }
