@@ -1,0 +1,94 @@
+snowball:
+  name: <gradient:#ff0000:#ffffff><bold>❄ Boule de neige magique ❄</bold></gradient>
+  lore:
+  - <dark_gray>ᴄᴏʟʟᴇᴄᴛɪᴏɴ ɴᴏᴇʟ 2025 ☃</dark_gray>
+  - <b></b>
+  - <gray>Lancez la sur un cadeau pour</gray>
+  - <gray>ouvrir celui ci !</gray>
+
+debug: false
+
+settings:
+  respawn_time_ticks: 20
+  max_concurrent_gifts: 30
+  cooldown_seconds: 1
+  vertical_offset: 0.0
+
+messages: # %time%
+  cooldown_message: <red>Doucement ! Il y aura des cadeaux pour tout le monde :)</red>
+  snowball_received: <white><bold>« <red>SH</red> » </bold>Vous avez reçu une <gradient:#ff0000:#ffffff><bold>boule de neige magique</bold></gradient> !</white>
+
+# CONFIGURATION DES RÉCOMPENSES ET MODÈLES
+rewards:
+  # Rareté "Commun"
+  common:
+    chance: 70
+    # Liste des modèles (sans extension) qui peuvent apparaître pour cette rareté
+    models:
+    - cadeau_rouge
+    commands:
+    # - rc cadeau_commun %player%
+    - shnetworklevel exp give %player% 1
+    - playerpoints:points give %player% 2
+    - msg:<aqua>+1 exp de network</aqua> <gray>(/network)</gray>
+  
+  # Rareté "Rare"
+  rare:
+    chance: 30
+    models:
+    - cadeau_bleu
+    commands:
+    # - rc cadeau_rare %player%
+    - shnetworklevel exp give %player% 2
+    - playerpoints:points give %player% 4
+    - msg:<aqua>+2 exp de network</aqua> <gray>(/network)</gray>
+
+# --- SECTION CLICKER ---
+clicker:
+  max_cps: 6
+  click_sound: BLOCK_SNOW_BREAK
+  
+  # Action bar affiche progression actuelle / requis pour niveau suivant
+  action_bar: '<gradient:#ff0000:#ffffff>Lvl %level% | Clics: %clicks%/%required%</gradient>
+    | <gradient:#ffffff:#ff0000>Prochain gain: %next_reward% ❄</gradient>'
+  
+  subtitle_on_click: ''
+  
+  levelup_message: <bold><green>FÉLICITATIONS !</green></bold> <gray>Vous passez niveau
+    <yellow>%level%</yellow> !</gray>
+  
+  # -- ALGORITHME MATHÉMATIQUE (INFINI) --
+  algorithm:
+    # Nombre de clics pour le niveau 1
+    base_clicks: 70
+    
+    # Difficulté : Multiplie le coût précédent. 
+    # 2.5 signifie : Niveau 1 = 50. Niveau 2 = 50 * 2.5 = 125. Niveau 3 = 125 * 2.5 ≈ 312.
+    multiplier: 1.22
+    
+    # Récompenses (Boules de neige)
+    base_reward: 1
+    # Combien de boules EN PLUS on gagne à chaque nouveau niveau
+    reward_increase_per_level: 1
+  
+  # -- ANTI AUTO CLICK AFK --
+  anti_afk:
+    # Au bout de combien de clics SANS bouger on bloque le joueur ?
+    max_static_clicks: 75
+    
+    # De quelle distance (en blocs) le joueur doit bouger pour reset le compteur ?
+    min_move_distance: 0.4
+    
+    # Message affiché en gros (subtitle) quand bloqué
+    warning_message: <red><bold>ANTI-AFK</bold></red> <gray>Bougez pour continuer
+      à cliquer</gray>
+
+region:
+  world: Christmas
+  # /shchristmaspresents setregion [1-2]
+  x1: 28.30000001192093
+  y1: 123.74355714909177
+  z1: 35.74524212543371
+  x2: -29.183782885779728
+  y2: 118.2762946894557
+  z2: -46.852533112979096
