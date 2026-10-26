@@ -1,5 +1,6 @@
 package org.Cry_Legende.sHChristmasPresents;
 
+import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 import com.google.gson.JsonArray;
@@ -22,12 +23,12 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
-import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.world.EntitiesLoadEvent;
+import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
-import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -397,6 +398,9 @@ public class SHChristmasPresents extends JavaPlugin implements Listener, Command
         new BukkitRunnable() {
             @Override
             public void run() {
+                // Cooldowns expirés : sinon la map garde chaque joueur ayant touché un cadeau
+                long now = System.currentTimeMillis();
+                cooldowns.values().removeIf(end -> end < now);
                 if (regionMin == null || regionMax == null) return;
                 activeGifts.entrySet().removeIf(entry -> {
                     Entity ent = Bukkit.getEntity(entry.getKey());
@@ -461,11 +465,12 @@ public class SHChristmasPresents extends JavaPlugin implements Listener, Command
 
     private void spawnGiftInWorld(LoadedModel model, String rarityKey) {
         World world = regionMin.getWorld();
+        if (world == null) return; // monde de la zone déchargé
         double x = ThreadLocalRandom.current().nextDouble(regionMin.getX(), regionMax.getX());
         double z = ThreadLocalRandom.current().nextDouble(regionMin.getZ(), regionMax.getZ());
 
-        if (!world.getChunkAt((int) x >> 4, (int) z >> 4).isLoaded())
-            world.getChunkAt((int) x >> 4, (int) z >> 4).load();
+        // Pas de chargement synchrone de chunk : un cadeau hors des chunks chargés n'est vu par personne
+        if (!world.isChunkLoaded((int) x >> 4, (int) z >> 4)) return;
         Block block = world.getHighestBlockAt((int) x, (int) z);
 
         double configOffset = getConfig().getDouble("settings.vertical_offset", 0.0);
@@ -491,6 +496,8 @@ public class SHChristmasPresents extends JavaPlugin implements Listener, Command
             entity.setInteractionWidth(model.width);
             entity.setInteractionHeight(model.height);
             entity.setResponsive(true);
+            // Jamais sauvé avec le chunk : un cadeau déchargé ou présent à l'arrêt ne revient pas orphelin
+            entity.setPersistent(false);
             entity.getPersistentDataContainer().set(GIFT_KEY, PersistentDataType.BYTE, (byte) 1);
             entity.getPersistentDataContainer().set(RARITY_KEY, PersistentDataType.STRING, rarityKey);
         });
@@ -513,6 +520,7 @@ public class SHChristmasPresents extends JavaPlugin implements Listener, Command
 
             Display display = (Display) world.spawn(spawnLoc, entityClass, entity -> {
                 entity.setRotation(spawnLoc.getYaw(), 0);
+                entity.setPersistent(false);
                 entity.getPersistentDataContainer().set(GIFT_KEY, PersistentDataType.BYTE, (byte) 1);
 
                 if (entity instanceof ItemDisplay itemDisplay) {
@@ -561,7 +569,7 @@ public class SHChristmasPresents extends JavaPlugin implements Listener, Command
             && interaction.getPersistentDataContainer().has(GIFT_KEY, PersistentDataType.BYTE)) {
             event.setCancelled(true);
             if (event.getDamager() instanceof Snowball snowball && snowball.getShooter() instanceof Player player) {
-                if (snowball.hasMetadata("xmas_snowball")) {
+                if (snowball.getPersistentDataContainer().has(SNOWBALL_KEY, PersistentDataType.BYTE)) {
                     debug("Hit (Damage)");
                     handleHit(player, interaction);
                     snowball.remove();
@@ -572,12 +580,14 @@ public class SHChristmasPresents extends JavaPlugin implements Listener, Command
 
     @EventHandler
     public void onProjectileHit(ProjectileHitEvent event) {
-        if (!(event.getEntity() instanceof Snowball snowball) || !snowball.hasMetadata("xmas_snowball")) return;
+        if (!(event.getEntity() instanceof Snowball snowball) || !snowball.getPersistentDataContainer().has(SNOWBALL_KEY, PersistentDataType.BYTE)) return;
+        // Lanceur déconnecté entre le lancer et l'impact
+        if (!(snowball.getShooter() instanceof Player shooter)) return;
 
         // 1. Check Direct Hit (Si la boule touche l'interaction)
         if (event.getHitEntity() instanceof Interaction i && i.getPersistentDataContainer().has(GIFT_KEY, PersistentDataType.BYTE)) {
             debug("Hit (Direct)");
-            handleHit((Player) snowball.getShooter(), i);
+            handleHit(shooter, i);
             return;
         }
 
@@ -605,13 +615,13 @@ public class SHChristmasPresents extends JavaPlugin implements Listener, Command
 
         if (closestGift != null) {
             debug("Hit (Proximité, dist=" + Math.sqrt(minDistanceSq) + ")");
-            handleHit((Player) snowball.getShooter(), closestGift);
+            handleHit(shooter, closestGift);
         } else {
             // Rate : On rend la boule
-            if (snowball.getShooter() instanceof Player p && p.getGameMode() != GameMode.CREATIVE) {
+            if (shooter.getGameMode() != GameMode.CREATIVE) {
                 ItemStack s = getSpecialSnowball();
                 s.setAmount(1);
-                if (!p.getInventory().addItem(s).isEmpty()) p.getWorld().dropItem(p.getLocation(), s);
+                if (!shooter.getInventory().addItem(s).isEmpty()) shooter.getWorld().dropItem(shooter.getLocation(), s);
             }
         }
     }
@@ -749,14 +759,27 @@ public class SHChristmasPresents extends JavaPlugin implements Listener, Command
         return snow;
     }
 
+    // L'objet réellement lancé : une boule normale en main avec la magique en seconde main n'est plus marquée
+    @EventHandler(ignoreCancelled = true)
+    public void onProjectileLaunch(PlayerLaunchProjectileEvent event) {
+        if (!(event.getProjectile() instanceof Snowball snowball)) return;
+        ItemStack item = event.getItemStack();
+        if (item.hasItemMeta() && item.getItemMeta().getPersistentDataContainer().has(SNOWBALL_KEY, PersistentDataType.BYTE))
+            snowball.getPersistentDataContainer().set(SNOWBALL_KEY, PersistentDataType.BYTE, (byte) 1);
+    }
+
+    // Le monde de la zone peut être chargé après onEnable (PhantomWorlds)
     @EventHandler
-    public void onProjectileLaunch(ProjectileLaunchEvent event) {
-        if (event.getEntity() instanceof Snowball snowball && snowball.getShooter() instanceof Player player) {
-            ItemStack item = player.getInventory().getItemInMainHand();
-            if (!item.hasItemMeta() || !item.getItemMeta().getPersistentDataContainer().has(SNOWBALL_KEY, PersistentDataType.BYTE))
-                item = player.getInventory().getItemInOffHand();
-            if (item.hasItemMeta() && item.getItemMeta().getPersistentDataContainer().has(SNOWBALL_KEY, PersistentDataType.BYTE))
-                snowball.setMetadata("xmas_snowball", new FixedMetadataValue(this, true));
+    public void onWorldLoad(WorldLoadEvent event) {
+        if ((regionMin == null || regionMin.getWorld() == null) && event.getWorld().getName().equals(getConfig().getString("region.world")))
+            loadRegion();
+    }
+
+    // Cadeaux restés dans un chunk sauvegardé (versions précédentes) : plus suivis, on les retire
+    @EventHandler
+    public void onEntitiesLoad(EntitiesLoadEvent event) {
+        for (Entity entity : event.getEntities()) {
+            if (entity.getPersistentDataContainer().has(GIFT_KEY, PersistentDataType.BYTE)) entity.remove();
         }
     }
 

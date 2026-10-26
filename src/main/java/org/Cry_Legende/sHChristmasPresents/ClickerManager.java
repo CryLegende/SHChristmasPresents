@@ -21,16 +21,25 @@ import org.bukkit.persistence.PersistentDataType;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ClickerManager implements Listener {
 
     private final SHChristmasPresents plugin;
     private final NamespacedKey CLICKER_KEY;
-    private final Map<UUID, PlayerData> playerDataCache = new HashMap<>();
+    // Concurrente : PlaceholderAPI peut interroger les données depuis un thread asynchrone
+    private final Map<UUID, PlayerData> playerDataCache = new ConcurrentHashMap<>();
     private final Set<UUID> snowmanIds = new HashSet<>();
     private final Map<UUID, Long> clickCooldowns = new HashMap<>();
+    private Sound clickSound;
+
+    // Écriture de playerdata.yml hors du thread principal : seul le dernier contenu figé est écrit
+    private final Object saveLock = new Object();
+    private String pendingPlayerData;
 
     private File snowmenFile;
     private FileConfiguration snowmenConfig;
@@ -42,11 +51,13 @@ public class ClickerManager implements Listener {
         this.CLICKER_KEY = new NamespacedKey(plugin, "clicker_snowman");
         loadFiles();
         loadSnowmen();
+        clickSound = sound(plugin.getConfig().getString("clicker.click_sound", "UI_BUTTON_CLICK"));
     }
 
     // --- DATA MANAGEMENT ---
 
     private void loadFiles() {
+        flushPlayerData(); // une écriture en attente doit être sur le disque avant de relire le fichier
         snowmenFile = new File(plugin.getDataFolder(), "snowmen.yml");
         if (!snowmenFile.exists()) {
             try {
@@ -71,6 +82,7 @@ public class ClickerManager implements Listener {
     public void reload() {
         loadFiles();
         loadSnowmen();
+        clickSound = sound(plugin.getConfig().getString("clicker.click_sound", "UI_BUTTON_CLICK"));
     }
 
     public void saveAll() {
@@ -79,11 +91,34 @@ public class ClickerManager implements Listener {
             playerDataConfig.set(path + ".clicks", entry.getValue().clicks);
             playerDataConfig.set(path + ".level", entry.getValue().level);
         }
+        synchronized (saveLock) {
+            pendingPlayerData = playerDataConfig.saveToString();
+        }
+        flushPlayerData();
         try {
-            playerDataConfig.save(playerDataFile);
             snowmenConfig.save(snowmenFile);
         } catch (IOException e) {
             plugin.getLogger().severe("Could not save clicker data!");
+        }
+    }
+
+    private void savePlayerDataAsync() {
+        String content = playerDataConfig.saveToString();
+        synchronized (saveLock) {
+            pendingPlayerData = content;
+        }
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, this::flushPlayerData);
+    }
+
+    private void flushPlayerData() {
+        synchronized (saveLock) {
+            if (pendingPlayerData == null || playerDataFile == null) return;
+            try {
+                Files.writeString(playerDataFile.toPath(), pendingPlayerData, StandardCharsets.UTF_8);
+            } catch (IOException e) {
+                plugin.getLogger().severe("Could not save clicker data!");
+            }
+            pendingPlayerData = null;
         }
     }
 
@@ -100,15 +135,14 @@ public class ClickerManager implements Listener {
     }
 
     public PlayerData getData(UUID uuid) {
-        if (playerDataCache.containsKey(uuid)) return playerDataCache.get(uuid);
-        PlayerData data = new PlayerData();
-        String path = uuid.toString();
-        data.clicks = playerDataConfig.getInt(path + ".clicks", 0);
-        data.level = playerDataConfig.getInt(path + ".level", 0);
-        Player p = Bukkit.getPlayer(uuid);
-        if (p != null) data.lastMoveLocation = p.getLocation();
-        playerDataCache.put(uuid, data);
-        return data;
+        // lastMoveLocation reste nul jusqu'au premier clic ou à la connexion (onJoin) : traité comme "a bougé"
+        return playerDataCache.computeIfAbsent(uuid, id -> {
+            PlayerData data = new PlayerData();
+            String path = id.toString();
+            data.clicks = playerDataConfig.getInt(path + ".clicks", 0);
+            data.level = playerDataConfig.getInt(path + ".level", 0);
+            return data;
+        });
     }
 
     @EventHandler
@@ -124,13 +158,10 @@ public class ClickerManager implements Listener {
             String path = uuid.toString();
             playerDataConfig.set(path + ".clicks", data.clicks);
             playerDataConfig.set(path + ".level", data.level);
-            try {
-                playerDataConfig.save(playerDataFile);
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
+            savePlayerDataAsync();
             playerDataCache.remove(uuid);
         }
+        clickCooldowns.remove(uuid);
     }
 
     // --- NPC MANAGEMENT ---
@@ -284,7 +315,7 @@ public class ClickerManager implements Listener {
         // --- ANTI CPS (PARTAGÉ GAUCHE/DROIT) ---
         long now = System.currentTimeMillis();
         long last = clickCooldowns.getOrDefault(player.getUniqueId(), 0L);
-        long minInterval = 1000L / plugin.getConfig().getInt("clicker.max_cps", 10);
+        long minInterval = 1000L / Math.max(1, plugin.getConfig().getInt("clicker.max_cps", 10));
 
         if (now - last < minInterval) return;
         clickCooldowns.put(player.getUniqueId(), now);
@@ -331,13 +362,8 @@ public class ClickerManager implements Listener {
     }
 
     private void playClickEffects(Player p, Entity snowman) {
-        // Son de clic
-        String soundName = plugin.getConfig().getString("clicker.click_sound", "UI_BUTTON_CLICK");
-        try {
-            Sound sound = Sound.valueOf(soundName);
-            p.playSound(p.getLocation(), sound, 0.5f, 1.5f);
-        } catch (Exception ignored) {
-        }
+        // Son de clic (résolu au chargement)
+        if (clickSound != null) p.playSound(p.getLocation(), clickSound, 0.5f, 1.5f);
 
         // Particules sur le NPC
         Location particleLoc = snowman.getLocation().add(0, 1.5, 0); // Au niveau de la tête
@@ -345,6 +371,21 @@ public class ClickerManager implements Listener {
         snowman.getWorld().spawnParticle(Particle.SNOWFLAKE, particleLoc, 7, 0.3, 0.4, 0.3, 0.05);
         // Particules d'impact (Boule de neige qui casse)
         snowman.getWorld().spawnParticle(Particle.ITEM_SNOWBALL, particleLoc, 3, 0.2, 0.2, 0.2, 0.1);
+    }
+
+    /** Son lu en config : ancien nom (ENTITY_PLAYER_LEVELUP) ou clé (minecraft:entity.player.levelup). */
+    static Sound sound(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String s = raw.trim();
+        if (s.indexOf(':') >= 0 || s.indexOf('.') >= 0) {
+            NamespacedKey key = NamespacedKey.fromString(s.toLowerCase(Locale.ROOT));
+            return key == null ? null : Registry.SOUND_EVENT.get(key);
+        }
+        try {
+            return (Sound) Sound.class.getField(s.toUpperCase(Locale.ROOT)).get(null);
+        } catch (ReflectiveOperationException | ClassCastException e) {
+            return null;
+        }
     }
 
     private int calculateRequiredClicks(int targetLevel) {
