@@ -37,14 +37,17 @@ public class ClickerManager implements Listener {
     private final Map<UUID, Long> clickCooldowns = new HashMap<>();
     private Sound clickSound;
 
-    // Écriture de playerdata.yml hors du thread principal : seul le dernier contenu figé est écrit
+    // Données de tous les joueurs (clé UUID -> {clics, niveau}), source unique de playerdata.yml.
+    // Le fichier est reconstruit et écrit hors du thread principal, au plus une fois par minute :
+    // sérialiser les ~4 000 joueurs à chaque déconnexion coûtait 60 à 330 ms de tick (stress test 2026-11-09).
+    private final Map<String, int[]> storedData = new ConcurrentHashMap<>();
+    private volatile boolean playerDataDirty;
     private final Object saveLock = new Object();
-    private String pendingPlayerData;
+    private org.bukkit.scheduler.BukkitTask flushTask;
 
     private File snowmenFile;
     private FileConfiguration snowmenConfig;
     private File playerDataFile;
-    private FileConfiguration playerDataConfig;
 
     public ClickerManager(SHChristmasPresents plugin) {
         this.plugin = plugin;
@@ -57,7 +60,7 @@ public class ClickerManager implements Listener {
     // --- DATA MANAGEMENT ---
 
     private void loadFiles() {
-        flushPlayerData(); // une écriture en attente doit être sur le disque avant de relire le fichier
+        if (playerDataFile != null) writePlayerData(); // une écriture en attente doit être sur le disque avant de relire le fichier
         snowmenFile = new File(plugin.getDataFolder(), "snowmen.yml");
         if (!snowmenFile.exists()) {
             try {
@@ -76,7 +79,16 @@ public class ClickerManager implements Listener {
                 e.printStackTrace();
             }
         }
-        playerDataConfig = YamlConfiguration.loadConfiguration(playerDataFile);
+        FileConfiguration playerDataConfig = YamlConfiguration.loadConfiguration(playerDataFile);
+        storedData.clear();
+        for (String key : playerDataConfig.getKeys(false)) {
+            storedData.put(key, new int[]{playerDataConfig.getInt(key + ".clicks", 0), playerDataConfig.getInt(key + ".level", 0)});
+        }
+        if (flushTask == null) {
+            flushTask = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, () -> {
+                if (playerDataDirty) writePlayerData();
+            }, 1200L, 1200L);
+        }
     }
 
     public void reload() {
@@ -87,14 +99,9 @@ public class ClickerManager implements Listener {
 
     public void saveAll() {
         for (Map.Entry<UUID, PlayerData> entry : playerDataCache.entrySet()) {
-            String path = entry.getKey().toString();
-            playerDataConfig.set(path + ".clicks", entry.getValue().clicks);
-            playerDataConfig.set(path + ".level", entry.getValue().level);
+            storedData.put(entry.getKey().toString(), new int[]{entry.getValue().clicks, entry.getValue().level});
         }
-        synchronized (saveLock) {
-            pendingPlayerData = playerDataConfig.saveToString();
-        }
-        flushPlayerData();
+        writePlayerData();
         try {
             snowmenConfig.save(snowmenFile);
         } catch (IOException e) {
@@ -102,27 +109,30 @@ public class ClickerManager implements Listener {
         }
     }
 
-    private void savePlayerDataAsync() {
-        String content = playerDataConfig.saveToString();
+    // Reconstruit playerdata.yml depuis storedData (YamlConfiguration neuve, propre au thread appelant) et l'écrit
+    private void writePlayerData() {
         synchronized (saveLock) {
-            pendingPlayerData = content;
-        }
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, this::flushPlayerData);
-    }
-
-    private void flushPlayerData() {
-        synchronized (saveLock) {
-            if (pendingPlayerData == null || playerDataFile == null) return;
+            if (playerDataFile == null) return;
+            playerDataDirty = false;
+            YamlConfiguration out = new YamlConfiguration();
+            for (Map.Entry<String, int[]> e : new TreeMap<>(storedData).entrySet()) {
+                out.set(e.getKey() + ".clicks", e.getValue()[0]);
+                out.set(e.getKey() + ".level", e.getValue()[1]);
+            }
             try {
-                Files.writeString(playerDataFile.toPath(), pendingPlayerData, StandardCharsets.UTF_8);
+                Files.writeString(playerDataFile.toPath(), out.saveToString(), StandardCharsets.UTF_8);
             } catch (IOException e) {
+                playerDataDirty = true;
                 plugin.getLogger().severe("Could not save clicker data!");
             }
-            pendingPlayerData = null;
         }
     }
 
     public void cleanup() {
+        if (flushTask != null) {
+            flushTask.cancel();
+            flushTask = null;
+        }
     }
 
     // --- PLAYER DATA ---
@@ -138,9 +148,11 @@ public class ClickerManager implements Listener {
         // lastMoveLocation reste nul jusqu'au premier clic ou à la connexion (onJoin) : traité comme "a bougé"
         return playerDataCache.computeIfAbsent(uuid, id -> {
             PlayerData data = new PlayerData();
-            String path = id.toString();
-            data.clicks = playerDataConfig.getInt(path + ".clicks", 0);
-            data.level = playerDataConfig.getInt(path + ".level", 0);
+            int[] stored = storedData.get(id.toString());
+            if (stored != null) {
+                data.clicks = stored[0];
+                data.level = stored[1];
+            }
             return data;
         });
     }
@@ -155,10 +167,8 @@ public class ClickerManager implements Listener {
         UUID uuid = e.getPlayer().getUniqueId();
         if (playerDataCache.containsKey(uuid)) {
             PlayerData data = playerDataCache.get(uuid);
-            String path = uuid.toString();
-            playerDataConfig.set(path + ".clicks", data.clicks);
-            playerDataConfig.set(path + ".level", data.level);
-            savePlayerDataAsync();
+            storedData.put(uuid.toString(), new int[]{data.clicks, data.level});
+            playerDataDirty = true;
             playerDataCache.remove(uuid);
         }
         clickCooldowns.remove(uuid);
