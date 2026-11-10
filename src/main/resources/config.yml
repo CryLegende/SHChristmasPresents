@@ -1,3 +1,28 @@
+# SHChristmasPresents
+#
+# Événement de Noël dans le monde de region.world : des cadeaux apparaissent dans la zone region et s'ouvrent en leur
+# lançant une boule de neige magique (rewards : commandes de chaque rareté). Les bonhommes de neige clicker (clicker)
+# donnent des boules de neige au fil des clics ; clics et niveau de chaque joueur sont dans playerdata.yml.
+#
+# Commandes (/shchristmaspresents, alias /xmas et /scp) :
+#   give <joueur> [nombre]   Donne des boules de neige magiques.
+#   setregion <1|2>          Définit un coin de la zone des cadeaux à votre position.
+#   createclicker            Place un bonhomme de neige clicker à votre position.
+#   removeclicker            Retire le bonhomme de neige clicker le plus proche (3 blocs).
+#   listclickers             Liste les bonhommes de neige clicker.
+#   reload                   Recharge config.yml.
+#
+# Permission :
+#   shchristmaspresents.admin   Utiliser /shchristmaspresents (par défaut : op).
+#
+# Placeholders (PlaceholderAPI) :
+#   %shchristmaspresents_clicks%   Clics du joueur sur les bonhommes de neige.
+#   %shchristmaspresents_level%    Niveau du joueur.
+#
+# Plusieurs serveurs de jeu : cadeaux et bonhommes de neige sont dans le monde Christmas, hébergé par un seul Opale.
+# Ne poser le plugin que sur celui-là : playerdata.yml (clics et niveau) n'a ainsi qu'un seul serveur qui l'écrit.
+# Rien à synchroniser, SHNetwork n'est pas utilisé.
+
 snowball:
   name: <gradient:#ff0000:#ffffff><bold>❄ Boule de neige magique ❄</bold></gradient>
   lore:
