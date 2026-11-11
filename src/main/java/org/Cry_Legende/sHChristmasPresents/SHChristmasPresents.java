@@ -17,7 +17,9 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -32,6 +34,7 @@ import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
@@ -40,6 +43,7 @@ import org.joml.Vector3f;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -63,11 +67,20 @@ public class SHChristmasPresents extends JavaPlugin implements Listener, Command
 
     // --- NOUVEAUX CHAMPS ---
     private ClickerManager clickerManager;
+    private Messages messages;
+    private BukkitTask spawnTask;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         reloadConfig();
+        messages = new Messages(this);
+        try {
+            messages.load();
+        } catch (IOException | InvalidConfigurationException e) {
+            getLogger().severe("messages.yml illisible, textes du jar utilisés : " + e.getMessage());
+            messages.useJar();
+        }
         debugMode = getConfig().getBoolean("debug", false);
 
         // --- INIT CLICKER MANAGER ---
@@ -354,6 +367,9 @@ public class SHChristmasPresents extends JavaPlugin implements Listener, Command
 
     private void loadRegion() {
         FileConfiguration config = getConfig();
+        // Une zone retirée du config.yml ou un monde absent ne laisse pas l'ancienne zone en mémoire
+        regionMin = null;
+        regionMax = null;
         if (config.contains("region.world")) {
             World world = Bukkit.getWorld(config.getString("region.world"));
             if (world != null) {
@@ -395,7 +411,11 @@ public class SHChristmasPresents extends JavaPlugin implements Listener, Command
     // --- SPAWN ---
 
     private void startSpawningTask() {
-        new BukkitRunnable() {
+        // Relancé au reload : annule le timer précédent pour prendre le nouveau respawn_time_ticks
+        if (spawnTask != null) {
+            spawnTask.cancel();
+        }
+        spawnTask = new BukkitRunnable() {
             @Override
             public void run() {
                 // Cooldowns expirés : sinon la map garde chaque joueur ayant touché un cadeau
@@ -629,7 +649,7 @@ public class SHChristmasPresents extends JavaPlugin implements Listener, Command
     private void handleHit(Player player, Interaction interaction) {
         if (isOnCooldown(player)) {
             long remaining = (cooldowns.get(player.getUniqueId()) - System.currentTimeMillis()) / 1000;
-            player.sendMessage(MiniMessage.miniMessage().deserialize(getConfig().getString("messages.cooldown_message", "Wait %time%s").replace("%time%", String.valueOf(remaining))));
+            player.sendMessage(messages.mini("cooldown_message", "%time%", String.valueOf(remaining)));
             if (player.getGameMode() != GameMode.CREATIVE) {
                 ItemStack s = getSpecialSnowball();
                 s.setAmount(1);
@@ -657,88 +677,193 @@ public class SHChristmasPresents extends JavaPlugin implements Listener, Command
 
     // --- COMMANDES ---
 
+    private static final List<String> ADMIN_SUBCOMMANDS =
+        List.of("give", "setregion", "createclicker", "removeclicker", "listclickers", "reload", "info");
+
+    /** Sous-commandes que l'expéditeur a le droit d'utiliser. */
+    private List<String> usableSubcommands(CommandSender sender) {
+        List<String> usable = new ArrayList<>();
+        for (String sub : ADMIN_SUBCOMMANDS) {
+            if (sender.hasPermission("shchristmaspresents.admin." + sub)) usable.add(sub);
+        }
+        return usable;
+    }
+
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
-        if (!sender.hasPermission("shchristmaspresents.admin")) return true;
-        if (args.length == 0) return false;
-
-        if (args[0].equalsIgnoreCase("setregion") && sender instanceof Player player) {
-            Location loc = player.getLocation();
-            FileConfiguration config = getConfig();
-            String key = (args.length > 1 && args[1].equalsIgnoreCase("2")) ? "2" : "1";
-            config.set("region.world", loc.getWorld().getName());
-            config.set("region.x" + key, loc.getX());
-            config.set("region.y" + key, loc.getY());
-            config.set("region.z" + key, loc.getZ());
-            player.sendMessage("§aPosition " + key + " définie.");
-            saveConfig();
-            loadRegion();
+        List<String> usable = usableSubcommands(sender);
+        if (usable.isEmpty()) return true;
+        String sub = args.length > 0 ? args[0].toLowerCase(Locale.ROOT) : "";
+        if (!usable.contains(sub)) {
+            sender.sendMessage(messages.legacy("usage", "%subcommands%", String.join("|", usable)));
             return true;
         }
 
-        if (args[0].equalsIgnoreCase("give")) {
-            Player target = (args.length >= 2) ? Bukkit.getPlayer(args[1]) : (sender instanceof Player ? (Player) sender : null);
-            if (target != null) {
-                int amount = 1;
-                if (args.length >= 3) {
-                    try {
-                        amount = Integer.parseInt(args[2]);
-                    } catch (Exception e) {
-                    }
+        switch (sub) {
+            case "give" -> commandGive(sender, args);
+            case "setregion" -> {
+                if (!(sender instanceof Player player)) {
+                    sender.sendMessage(messages.legacy("player-only"));
+                    return true;
                 }
-                ItemStack item = getSpecialSnowball();
-                item.setAmount(amount);
-                target.getInventory().addItem(item);
-                target.sendMessage(MiniMessage.miniMessage().deserialize(getConfig().getString("messages.snowball_received", "<green>Reçu!")));
+                Location loc = player.getLocation();
+                FileConfiguration config = getConfig();
+                String key = (args.length > 1 && args[1].equalsIgnoreCase("2")) ? "2" : "1";
+                config.set("region.world", loc.getWorld().getName());
+                config.set("region.x" + key, loc.getX());
+                config.set("region.y" + key, loc.getY());
+                config.set("region.z" + key, loc.getZ());
+                player.sendMessage(messages.legacy("region-set", "%corner%", key));
+                saveConfig();
+                loadRegion();
             }
-            return true;
-        }
-
-        // --- COMMANDES CLICKER SNOWMAN ---
-        if (args[0].equalsIgnoreCase("createclicker") && sender instanceof Player player) {
-            clickerManager.createSnowman(player.getLocation());
-            player.sendMessage("§aBonhomme de neige clicker créé !");
-            return true;
-        }
-
-        if (args[0].equalsIgnoreCase("removeclicker") && sender instanceof Player player) {
-            if (clickerManager.removeNearestSnowman(player.getLocation())) {
-                player.sendMessage("§aBonhomme de neige supprimé.");
-            } else {
-                player.sendMessage("§cAucun bonhomme de neige clicker trouvé à proximité (3 blocs).");
+            case "createclicker" -> {
+                if (!(sender instanceof Player player)) {
+                    sender.sendMessage(messages.legacy("player-only"));
+                    return true;
+                }
+                clickerManager.createSnowman(player.getLocation());
+                player.sendMessage(messages.legacy("clicker-created"));
             }
-            return true;
+            case "removeclicker" -> {
+                if (!(sender instanceof Player player)) {
+                    sender.sendMessage(messages.legacy("player-only"));
+                    return true;
+                }
+                if (clickerManager.removeNearestSnowman(player.getLocation())) {
+                    player.sendMessage(messages.legacy("clicker-removed"));
+                } else {
+                    player.sendMessage(messages.legacy("clicker-none-nearby"));
+                }
+            }
+            case "listclickers" -> {
+                sender.sendMessage(messages.legacy("clickers-header", "%count%", String.valueOf(clickerManager.getSnowmanCount())));
+                clickerManager.getSnowmanLocations().forEach(loc ->
+                    sender.sendMessage(messages.legacy("clickers-line", "%world%", loc.getWorld().getName(),
+                        "%x%", String.valueOf((int) loc.getX()), "%y%", String.valueOf((int) loc.getY()),
+                        "%z%", String.valueOf((int) loc.getZ())))
+                );
+            }
+            case "reload" -> commandReload(sender);
+            default -> commandInfo(sender, args);
         }
+        return true;
+    }
 
-        if (args[0].equalsIgnoreCase("listclickers")) {
-            sender.sendMessage("§eListe des Clicker Snowmen (" + clickerManager.getSnowmanCount() + "):");
-            clickerManager.getSnowmanLocations().forEach(loc ->
-                sender.sendMessage(" - " + loc.getWorld().getName() + " " + (int) loc.getX() + ", " + (int) loc.getY() + ", " + (int) loc.getZ())
-            );
-            return true;
+    /** /shchristmaspresents give [joueur] [nombre] : sans nom, la boule va à l'expéditeur (joueur seulement). */
+    private void commandGive(CommandSender sender, String[] args) {
+        Player target = (args.length >= 2) ? Bukkit.getPlayer(args[1]) : (sender instanceof Player ? (Player) sender : null);
+        if (target == null) {
+            sender.sendMessage(messages.legacy(args.length >= 2 ? "player-not-found" : "give-usage",
+                "%player%", args.length >= 2 ? args[1] : ""));
+            return;
         }
+        int amount = 1;
+        if (args.length >= 3) {
+            try {
+                amount = Integer.parseInt(args[2]);
+            } catch (Exception e) {
+            }
+        }
+        ItemStack item = getSpecialSnowball();
+        item.setAmount(amount);
+        target.getInventory().addItem(item);
+        target.sendMessage(messages.mini("snowball_received"));
+        if (!target.equals(sender)) {
+            sender.sendMessage(messages.legacy("give-done", "%player%", target.getName(), "%amount%", String.valueOf(amount)));
+        }
+    }
 
-        if (args[0].equalsIgnoreCase("reload")) {
-            reloadConfig();
-            debugMode = getConfig().getBoolean("debug", false);
-            loadRegion();
-            loadModels();
-            cleanupGifts();
-            clickerManager.reload(); // Reload clicker config
-            sender.sendMessage("§aReload OK.");
-            return true;
+    /** Fichier invalide et cause (« fichier|cause »), ou null si config.yml et messages.yml se lisent. */
+    private String checkFiles() {
+        for (String name : new String[] {"config.yml", "messages.yml"}) {
+            File file = new File(getDataFolder(), name);
+            if (!file.exists()) continue;
+            try {
+                new YamlConfiguration().load(file);
+            } catch (IOException | InvalidConfigurationException e) {
+                Throwable cause = e.getCause() != null ? e.getCause() : e;
+                String text = String.valueOf(cause.getMessage()).replaceAll("\\s+", " ").trim();
+                return name + "|" + (text.length() > 200 ? text.substring(0, 200) + "..." : text);
+            }
         }
-        return false;
+        return null;
+    }
+
+    /**
+     * /shchristmaspresents reload : config.yml et messages.yml sont lus en mode strict avant de toucher à l'état.
+     * playerdata.yml et snowmen.yml (données) ne sont ni relus ni réécrits.
+     */
+    private void commandReload(CommandSender sender) {
+        String error = checkFiles();
+        if (error != null) {
+            String[] parts = error.split("\\|", 2);
+            getLogger().warning("Rechargement refusé, configuration précédente gardée (" + parts[0] + " : " + parts[1] + ").");
+            sender.sendMessage(messages.legacy("reload-error", "%file%", parts[0], "%error%", parts[1]));
+            return;
+        }
+        reloadConfig();
+        try {
+            messages.load();
+        } catch (IOException | InvalidConfigurationException e) {
+            getLogger().warning("messages.yml relu avec erreur : " + e.getMessage());
+        }
+        debugMode = getConfig().getBoolean("debug", false);
+        cleanupGifts();
+        loadRegion();
+        loadModels();
+        clickerManager.reload();
+        startSpawningTask();
+        sender.sendMessage(messages.legacy("reload-success", "%models%", String.valueOf(cachedModels.size())));
+    }
+
+    /** /shchristmaspresents info <joueur> : clics et niveau du clicker, joueur en ligne ou connu du cache. */
+    private void commandInfo(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage(messages.legacy("info-usage"));
+            return;
+        }
+        UUID uuid = null;
+        String name = args[1];
+        Player online = Bukkit.getPlayerExact(args[1]);
+        if (online != null) {
+            uuid = online.getUniqueId();
+            name = online.getName();
+        } else {
+            try {
+                uuid = UUID.fromString(args[1]);
+            } catch (IllegalArgumentException e) {
+                // Jamais getOfflinePlayer(nom) : il interroge Mojang et renvoie l'UUID premium, pas celui du réseau
+                OfflinePlayer cached = Bukkit.getOfflinePlayerIfCached(args[1]);
+                if (cached != null) {
+                    uuid = cached.getUniqueId();
+                    name = cached.getName() != null ? cached.getName() : args[1];
+                }
+            }
+        }
+        int[] stats = uuid == null ? null : clickerManager.statsOf(uuid);
+        if (stats == null) {
+            sender.sendMessage(messages.legacy("info-unknown", "%player%", name));
+            return;
+        }
+        sender.sendMessage(messages.legacy("info-line", "%player%", name, "%clicks%", String.valueOf(stats[0]),
+            "%level%", String.valueOf(stats[1]), "%required%", String.valueOf(clickerManager.requiredClicks(stats[1] + 1))));
     }
 
     @Override
     public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
-        if (!sender.hasPermission("shchristmaspresents.admin")) return Collections.emptyList();
-        if (args.length == 1)
-            return Arrays.asList("give", "setregion", "reload", "createclicker", "removeclicker", "listclickers");
-        if (args.length == 2 && args[0].equalsIgnoreCase("setregion")) return Arrays.asList("1", "2");
-        if (args.length == 3 && args[0].equalsIgnoreCase("give")) return Arrays.asList("1", "16", "64");
-        return null;
+        if (args.length == 1) {
+            String typed = args[0].toLowerCase(Locale.ROOT);
+            return usableSubcommands(sender).stream().filter(name -> name.startsWith(typed)).toList();
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("setregion") && sender.hasPermission("shchristmaspresents.admin.setregion"))
+            return Arrays.asList("1", "2");
+        if (args.length == 2 && (args[0].equalsIgnoreCase("give") || args[0].equalsIgnoreCase("info"))
+            && sender.hasPermission("shchristmaspresents.admin." + args[0].toLowerCase(Locale.ROOT)))
+            return null;
+        if (args.length == 3 && args[0].equalsIgnoreCase("give") && sender.hasPermission("shchristmaspresents.admin.give"))
+            return Arrays.asList("1", "16", "64");
+        return Collections.emptyList();
     }
 
     public ItemStack getSpecialSnowball() {

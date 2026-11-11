@@ -22,13 +22,28 @@ Utilisé sur : **Opale**.
 
 | Commande | Alias | Description | Permission |
 |---|---|---|---|
-| `/shchristmaspresents` | `/xmas`, `/scp` | Commande principale du plugin | `shchristmaspresents.admin` |
+| `/shchristmaspresents give [joueur] [nombre]` | `/xmas`, `/scp` | Donne des boules de neige magiques | `shchristmaspresents.admin.give` |
+| `/shchristmaspresents setregion <1\|2>` | `/xmas`, `/scp` | Définit un coin de la zone des cadeaux à votre position | `shchristmaspresents.admin.setregion` |
+| `/shchristmaspresents createclicker` | `/xmas`, `/scp` | Place un bonhomme de neige clicker | `shchristmaspresents.admin.createclicker` |
+| `/shchristmaspresents removeclicker` | `/xmas`, `/scp` | Retire le bonhomme de neige clicker le plus proche (3 blocs) | `shchristmaspresents.admin.removeclicker` |
+| `/shchristmaspresents listclickers` | `/xmas`, `/scp` | Liste les bonhommes de neige clicker | `shchristmaspresents.admin.listclickers` |
+| `/shchristmaspresents reload` | `/xmas`, `/scp` | Relit `config.yml`, `messages.yml` et `models/`, relance l'apparition des cadeaux. Si un fichier est invalide, rien n'est remplacé. Les fichiers de données ne sont jamais relus. | `shchristmaspresents.admin.reload` |
+| `/shchristmaspresents info <joueur>` | `/xmas`, `/scp` | Clics, niveau et clics du prochain niveau d'un joueur | `shchristmaspresents.admin.info` |
+
+Sans argument, la commande affiche les sous-commandes que l'on peut utiliser. `give`, `listclickers`, `reload` et `info` marchent depuis la console.
 
 ## Permissions
 
 | Permission | Description | Par défaut |
 |---|---|---|
-| `shchristmaspresents.admin` | Permet d'utiliser les commandes d'admin | `op` |
+| `shchristmaspresents.admin` | Toutes les sous-commandes de `/shchristmaspresents` | `op` |
+| `shchristmaspresents.admin.give` | `give` | `op` |
+| `shchristmaspresents.admin.setregion` | `setregion` | `op` |
+| `shchristmaspresents.admin.createclicker` | `createclicker` | `op` |
+| `shchristmaspresents.admin.removeclicker` | `removeclicker` | `op` |
+| `shchristmaspresents.admin.listclickers` | `listclickers` | `op` |
+| `shchristmaspresents.admin.reload` | `reload` | `op` |
+| `shchristmaspresents.admin.info` | `info` | `op` |
 
 ## Configuration
 
@@ -36,8 +51,11 @@ Fichiers par défaut repris du serveur (secrets remplacés par `CHANGE_ME`). Cli
 
 <pre>
 plugins/SHChristmasPresents/
-└── <a href="src/main/resources/config.yml">config.yml</a>
+├── <a href="src/main/resources/config.yml">config.yml</a>
+└── <a href="src/main/resources/messages.yml">messages.yml</a>
 </pre>
+
+Si `messages.yml` n'existe pas au démarrage, il est créé à partir de l'ancienne section `messages:` de `config.yml` (textes déjà personnalisés conservés) ; cette section n'est plus lue ensuite.
 
 ## Plusieurs serveurs de jeu
 

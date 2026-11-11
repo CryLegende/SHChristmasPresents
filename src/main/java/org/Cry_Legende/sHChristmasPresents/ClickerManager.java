@@ -91,10 +91,24 @@ public class ClickerManager implements Listener {
         }
     }
 
+    /** Relit les réglages (son du clic). playerdata.yml et snowmen.yml sont des données : jamais relus au reload. */
     public void reload() {
-        loadFiles();
-        loadSnowmen();
         clickSound = sound(plugin.getConfig().getString("clicker.click_sound", "UI_BUTTON_CLICK"));
+    }
+
+    /** Clics et niveau d'un joueur (en ligne ou connu du fichier de données), ou null s'il n'a jamais cliqué. */
+    public int[] statsOf(UUID uuid) {
+        PlayerData cached = playerDataCache.get(uuid);
+        if (cached != null) {
+            return new int[]{cached.clicks, cached.level};
+        }
+        int[] stored = storedData.get(uuid.toString());
+        return stored == null ? null : new int[]{stored[0], stored[1]};
+    }
+
+    /** Clics nécessaires pour atteindre ce niveau (réglages du clicker). */
+    public int requiredClicks(int level) {
+        return calculateRequiredClicks(level);
     }
 
     public void saveAll() {

@@ -1,0 +1,30 @@
+# Textes de SHChristmasPresents.
+# cooldown_message et snowball_received : format MiniMessage (cooldown_message : %time% = secondes restantes).
+# Les autres textes : codes couleur avec &, précédés du préfixe.
+
+# Préfixe des textes de la commande.
+prefix: "&7&l« &c&lSH &8&l» &7"
+
+# Un joueur touche un cadeau pendant son cooldown.
+cooldown_message: <red>Doucement ! Il y aura des cadeaux pour tout le monde :)</red>
+
+# Un joueur reçoit une boule de neige magique.
+snowball_received: <white><bold>« <red>SH</red> » </bold>Vous avez reçu une <gradient:#ff0000:#ffffff><bold>boule de neige magique</bold></gradient> !</white>
+
+# /shchristmaspresents sans argument ou avec une sous-commande inconnue. %subcommands% : sous-commandes permises.
+usage: "Utilisation : &c/shchristmaspresents <%subcommands%>"
+player-only: "Cette commande est &creservée aux joueurs&7."
+player-not-found: "Le joueur &c%player% &7n'est pas en ligne."
+give-usage: "Utilisation : &c/shchristmaspresents give <joueur> [nombre]"
+give-done: "&a%amount% &7boule(s) de neige magique(s) donnée(s) à &a%player%&7."
+region-set: "Position &a%corner% &7de la zone des cadeaux définie."
+clicker-created: "Bonhomme de neige clicker &acréé&7."
+clicker-removed: "Bonhomme de neige clicker &asupprimé&7."
+clicker-none-nearby: "Aucun bonhomme de neige clicker à moins de &c3 blocs&7."
+clickers-header: "Bonhommes de neige clicker (&e%count%&7) :"
+clickers-line: "&8 - &7%world% %x%, %y%, %z%"
+reload-success: "Configuration &arechargée&7 : zone, modèles (&e%models%&7), textes et apparition des cadeaux."
+reload-error: "Rechargement &crefusé &7(%file% : %error%). La configuration précédente est conservée."
+info-usage: "Utilisation : &c/shchristmaspresents info <joueur>"
+info-unknown: "Aucune donnée de clicker pour &c%player%&7."
+info-line: "&e%player% &7: &e%clicks% &7clics, niveau &e%level%&7, prochain niveau à &e%required% &7clics."

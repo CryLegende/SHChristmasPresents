@@ -5,15 +5,25 @@
 # donnent des boules de neige au fil des clics ; clics et niveau de chaque joueur sont dans playerdata.yml.
 #
 # Commandes (/shchristmaspresents, alias /xmas et /scp) :
-#   give <joueur> [nombre]   Donne des boules de neige magiques.
+#   give [joueur] [nombre]   Donne des boules de neige magiques (sans joueur : à soi).
 #   setregion <1|2>          Définit un coin de la zone des cadeaux à votre position.
 #   createclicker            Place un bonhomme de neige clicker à votre position.
 #   removeclicker            Retire le bonhomme de neige clicker le plus proche (3 blocs).
 #   listclickers             Liste les bonhommes de neige clicker.
-#   reload                   Recharge config.yml.
+#   reload                   Relit config.yml, messages.yml et models/, retire les cadeaux actifs, relance
+#                            l'apparition des cadeaux avec le nouveau settings.respawn_time_ticks. Si config.yml ou
+#                            messages.yml est invalide, rien n'est remplacé et le message donne le fichier et
+#                            l'erreur. playerdata.yml et snowmen.yml ne sont jamais relus.
+#   info <joueur>            Clics, niveau et clics du prochain niveau d'un joueur.
+#   Sans argument, la commande affiche les sous-commandes que vous pouvez utiliser. give, listclickers, reload et
+#   info marchent depuis la console ; les autres demandent un joueur.
 #
-# Permission :
-#   shchristmaspresents.admin   Utiliser /shchristmaspresents (par défaut : op).
+# Permissions (op par défaut) :
+#   shchristmaspresents.admin                  Toutes les sous-commandes.
+#   shchristmaspresents.admin.give, .setregion, .createclicker, .removeclicker, .listclickers, .reload, .info
+#                                              Une par sous-commande.
+#
+# Les textes de la commande, du cooldown et de la réception d'une boule sont dans messages.yml.
 #
 # Placeholders (PlaceholderAPI) :
 #   %shchristmaspresents_clicks%   Clics du joueur sur les bonhommes de neige.
@@ -38,10 +48,6 @@ settings:
   max_concurrent_gifts: 30
   cooldown_seconds: 1
   vertical_offset: 0.0
-
-messages: # %time%
-  cooldown_message: <red>Doucement ! Il y aura des cadeaux pour tout le monde :)</red>
-  snowball_received: <white><bold>« <red>SH</red> » </bold>Vous avez reçu une <gradient:#ff0000:#ffffff><bold>boule de neige magique</bold></gradient> !</white>
 
 # CONFIGURATION DES RÉCOMPENSES ET MODÈLES
 rewards:

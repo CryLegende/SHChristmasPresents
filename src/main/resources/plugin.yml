@@ -7,12 +7,41 @@ description: Un plugin d'évènement de Noël avec des cadeaux BlockDisplay et d
 
 commands:
   shchristmaspresents:
-    description: Commande principale du plugin
+    description: Administration de l'évènement de Noël
     aliases: [xmas, scp]
-    usage: /shchristmaspresents <subcommand>
-    permission: shchristmaspresents.admin
+    usage: /shchristmaspresents <give|setregion|createclicker|removeclicker|listclickers|reload|info>
+    permission: shchristmaspresents.admin.give;shchristmaspresents.admin.setregion;shchristmaspresents.admin.createclicker;shchristmaspresents.admin.removeclicker;shchristmaspresents.admin.listclickers;shchristmaspresents.admin.reload;shchristmaspresents.admin.info
 
 permissions:
   shchristmaspresents.admin:
-    description: Permet d'utiliser les commandes d'admin
+    description: Toutes les sous-commandes de /shchristmaspresents
+    default: op
+    children:
+      shchristmaspresents.admin.give: true
+      shchristmaspresents.admin.setregion: true
+      shchristmaspresents.admin.createclicker: true
+      shchristmaspresents.admin.removeclicker: true
+      shchristmaspresents.admin.listclickers: true
+      shchristmaspresents.admin.reload: true
+      shchristmaspresents.admin.info: true
+  shchristmaspresents.admin.give:
+    description: Donner des boules de neige magiques avec /shchristmaspresents give
+    default: op
+  shchristmaspresents.admin.setregion:
+    description: Définir un coin de la zone des cadeaux avec /shchristmaspresents setregion
+    default: op
+  shchristmaspresents.admin.createclicker:
+    description: Placer un bonhomme de neige clicker avec /shchristmaspresents createclicker
+    default: op
+  shchristmaspresents.admin.removeclicker:
+    description: Retirer un bonhomme de neige clicker avec /shchristmaspresents removeclicker
+    default: op
+  shchristmaspresents.admin.listclickers:
+    description: Lister les bonhommes de neige clicker avec /shchristmaspresents listclickers
+    default: op
+  shchristmaspresents.admin.reload:
+    description: Recharger la configuration avec /shchristmaspresents reload
+    default: op
+  shchristmaspresents.admin.info:
+    description: Voir les clics et le niveau d'un joueur avec /shchristmaspresents info
     default: op
