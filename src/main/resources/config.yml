@@ -61,7 +61,7 @@ rewards:
     # - rc cadeau_commun %player%
     - shnetworklevel exp give %player% 1
     - playerpoints:points give %player% 2
-    - msg:<aqua>+1 exp de network</aqua> <gray>(/network)</gray>
+    - sm %player% &b+1 exp de network%shnetworklevel_bonus_texte% &7(/network)
   
   # Rareté "Rare"
   rare:
@@ -72,7 +72,7 @@ rewards:
     # - rc cadeau_rare %player%
     - shnetworklevel exp give %player% 2
     - playerpoints:points give %player% 4
-    - msg:<aqua>+2 exp de network</aqua> <gray>(/network)</gray>
+    - sm %player% &b+2 exp de network%shnetworklevel_bonus_texte% &7(/network)
 
 # --- SECTION CLICKER ---
 clicker:
