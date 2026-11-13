@@ -29,7 +29,7 @@
 #   %shchristmaspresents_clicks%   Clics du joueur sur les bonhommes de neige.
 #   %shchristmaspresents_level%    Niveau du joueur.
 #
-# Plusieurs serveurs de jeu : cadeaux et bonhommes de neige sont dans le monde Christmas, hébergé par un seul Opale.
+# Plusieurs serveurs de jeu : cadeaux et bonhommes de neige sont dans le monde de region.world, hébergé par un seul serveur.
 # Ne poser le plugin que sur celui-là : playerdata.yml (clics et niveau) n'a ainsi qu'un seul serveur qui l'écrit.
 # Rien à synchroniser, SHNetwork n'est pas utilisé.
 
@@ -58,10 +58,8 @@ rewards:
     models:
     - cadeau_rouge
     commands:
-    # - rc cadeau_commun %player%
-    - shnetworklevel exp give %player% 1
-    - playerpoints:points give %player% 2
-    - sm %player% &b+1 exp de network%shnetworklevel_bonus_texte% &7(/network)
+    - give %player% emerald 2
+    - msg %player% &aVous avez trouvé 2 émeraudes !
   
   # Rareté "Rare"
   rare:
@@ -69,10 +67,8 @@ rewards:
     models:
     - cadeau_bleu
     commands:
-    # - rc cadeau_rare %player%
-    - shnetworklevel exp give %player% 2
-    - playerpoints:points give %player% 4
-    - sm %player% &b+2 exp de network%shnetworklevel_bonus_texte% &7(/network)
+    - give %player% diamond 1
+    - msg %player% &bVous avez trouvé un diamant !
 
 # --- SECTION CLICKER ---
 clicker:
@@ -91,11 +87,11 @@ clicker:
   # -- ALGORITHME MATHÉMATIQUE (INFINI) --
   algorithm:
     # Nombre de clics pour le niveau 1
-    base_clicks: 70
+    base_clicks: 50
     
     # Difficulté : Multiplie le coût précédent. 
     # 2.5 signifie : Niveau 1 = 50. Niveau 2 = 50 * 2.5 = 125. Niveau 3 = 125 * 2.5 ≈ 312.
-    multiplier: 1.22
+    multiplier: 1.5
     
     # Récompenses (Boules de neige)
     base_reward: 1
@@ -105,7 +101,7 @@ clicker:
   # -- ANTI AUTO CLICK AFK --
   anti_afk:
     # Au bout de combien de clics SANS bouger on bloque le joueur ?
-    max_static_clicks: 75
+    max_static_clicks: 100
     
     # De quelle distance (en blocs) le joueur doit bouger pour reset le compteur ?
     min_move_distance: 0.4
@@ -115,11 +111,11 @@ clicker:
       à cliquer</gray>
 
 region:
-  world: Christmas
+  world: world
   # /shchristmaspresents setregion [1-2]
-  x1: 28.30000001192093
-  y1: 123.74355714909177
-  z1: 35.74524212543371
-  x2: -29.183782885779728
-  y2: 118.2762946894557
-  z2: -46.852533112979096
+  x1: 10.0
+  y1: 70.0
+  z1: 10.0
+  x2: -10.0
+  y2: 64.0
+  z2: -10.0
