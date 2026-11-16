@@ -3,16 +3,44 @@ version: '${project.version}'
 main: org.Cry_Legende.sHChristmasPresents.SHChristmasPresents
 api-version: '1.20'
 author: Cry_Legende
-description: Un plugin d'évènement de Noël avec des cadeaux BlockDisplay et des boules de neige.
+description: L'évènement de Noël d'Opale (calendrier de l'Avent, Flocons, Grand Sapin, carte, boutique, cadeaux).
+softdepend: [PlaceholderAPI, PlayerPoints]
+libraries:
+  - com.zaxxer:HikariCP:5.1.0
+  - org.mariadb.jdbc:mariadb-java-client:3.4.1
 
 commands:
   shchristmaspresents:
     description: Administration de l'évènement de Noël
     aliases: [xmas, scp]
-    usage: /shchristmaspresents <give|setregion|createclicker|removeclicker|listclickers|reload|info>
-    permission: shchristmaspresents.admin.give;shchristmaspresents.admin.setregion;shchristmaspresents.admin.createclicker;shchristmaspresents.admin.removeclicker;shchristmaspresents.admin.listclickers;shchristmaspresents.admin.reload;shchristmaspresents.admin.info
+    usage: /shchristmaspresents <sous-commande>
+    permission: shchristmaspresents.admin.give;shchristmaspresents.admin.setregion;shchristmaspresents.admin.createclicker;shchristmaspresents.admin.removeclicker;shchristmaspresents.admin.listclickers;shchristmaspresents.admin.reload;shchristmaspresents.admin.info;shchristmaspresents.admin.flocons;shchristmaspresents.admin.multiplicateur;shchristmaspresents.admin.compteur;shchristmaspresents.admin.tampon;shchristmaspresents.admin.acheter;shchristmaspresents.admin.sapin;shchristmaspresents.admin.drop;shchristmaspresents.admin.horloge;shchristmaspresents.admin.bilan;shchristmaspresents.admin.tous
+  calendrier:
+    description: Calendrier de l'Avent
+    aliases: [avent]
+    permission: shchristmaspresents.use
+    usage: /calendrier
+  carte:
+    description: Carte de Noël
+    permission: shchristmaspresents.use
+    usage: /carte
+  sapin:
+    description: Grand Sapin
+    permission: shchristmaspresents.use
+    usage: /sapin [offrir <nombre>]
+  flocons:
+    description: Flocons gagnés aujourd'hui
+    permission: shchristmaspresents.use
+    usage: /flocons
+  cadeau:
+    description: Offrir des Flocons à un joueur
+    permission: shchristmaspresents.use
+    usage: /cadeau <joueur> <montant>
 
 permissions:
+  shchristmaspresents.use:
+    description: Commandes joueur de Noël (/calendrier, /carte, /sapin, /flocons, /cadeau)
+    default: true
   shchristmaspresents.admin:
     description: Toutes les sous-commandes de /shchristmaspresents
     default: op
@@ -24,6 +52,16 @@ permissions:
       shchristmaspresents.admin.listclickers: true
       shchristmaspresents.admin.reload: true
       shchristmaspresents.admin.info: true
+      shchristmaspresents.admin.flocons: true
+      shchristmaspresents.admin.multiplicateur: true
+      shchristmaspresents.admin.compteur: true
+      shchristmaspresents.admin.tampon: true
+      shchristmaspresents.admin.acheter: true
+      shchristmaspresents.admin.sapin: true
+      shchristmaspresents.admin.drop: true
+      shchristmaspresents.admin.horloge: true
+      shchristmaspresents.admin.bilan: true
+      shchristmaspresents.admin.tous: true
   shchristmaspresents.admin.give:
     description: Donner des boules de neige magiques avec /shchristmaspresents give
     default: op
@@ -43,5 +81,35 @@ permissions:
     description: Recharger la configuration avec /shchristmaspresents reload
     default: op
   shchristmaspresents.admin.info:
-    description: Voir les clics et le niveau d'un joueur avec /shchristmaspresents info
+    description: Voir où en est un joueur avec /shchristmaspresents info
+    default: op
+  shchristmaspresents.admin.flocons:
+    description: Verser des Flocons avec /shchristmaspresents flocons
+    default: op
+  shchristmaspresents.admin.multiplicateur:
+    description: Lancer un multiplicateur de Flocons avec /shchristmaspresents multiplicateur
+    default: op
+  shchristmaspresents.admin.compteur:
+    description: Augmenter un compteur de la carte avec /shchristmaspresents compteur
+    default: op
+  shchristmaspresents.admin.tampon:
+    description: Accorder un tampon de la carte avec /shchristmaspresents tampon
+    default: op
+  shchristmaspresents.admin.acheter:
+    description: Acheter un article de la boutique pour un joueur avec /shchristmaspresents acheter
+    default: op
+  shchristmaspresents.admin.sapin:
+    description: Régler le Grand Sapin avec /shchristmaspresents sapin
+    default: op
+  shchristmaspresents.admin.drop:
+    description: Lancer une pluie de cadeaux avec /shchristmaspresents drop
+    default: op
+  shchristmaspresents.admin.horloge:
+    description: Régler l'horloge de test avec /shchristmaspresents horloge
+    default: op
+  shchristmaspresents.admin.bilan:
+    description: Écrire le bilan de l'évènement avec /shchristmaspresents bilan
+    default: op
+  shchristmaspresents.admin.tous:
+    description: Lancer une commande pour chaque joueur en ligne avec /shchristmaspresents tous
     default: op

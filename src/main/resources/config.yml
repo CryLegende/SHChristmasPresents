@@ -1,121 +1,565 @@
-# SHChristmasPresents
+# SHChristmasPresents 2.0
 #
-# Événement de Noël dans le monde de region.world : des cadeaux apparaissent dans la zone region et s'ouvrent en leur
-# lançant une boule de neige magique (rewards : commandes de chaque rareté). Les bonhommes de neige clicker (clicker)
-# donnent des boules de neige au fil des clics ; clics et niveau de chaque joueur sont dans playerdata.yml.
+# L'évènement de Noël d'Opale : horloge et phases, Flocons (portefeuille PlayerPoints piloté par commandes), calendrier
+# de l'Avent, Grand Sapin, carte de Noël, boutique, cadeaux entre joueurs, petits cadeaux sur l'île, cadeaux du village
+# à la boule de neige, bonhommes de neige clicker, pluie de cadeaux (Drop), retour des absents, livre « Mon Noël » et
+# bilan. Données en MariaDB, tables shxmas_* avec une colonne annee : changer annee repart de zéro sans rien effacer.
+# Un seul serveur (Opale), rien à synchroniser. Toutes les heures sont celles du fuseau, jamais celle du système.
 #
-# Commandes (/shchristmaspresents, alias /xmas et /scp) :
-#   give [joueur] [nombre]   Donne des boules de neige magiques (sans joueur : à soi).
-#   setregion <1|2>          Définit un coin de la zone des cadeaux à votre position.
-#   createclicker            Place un bonhomme de neige clicker à votre position.
-#   removeclicker            Retire le bonhomme de neige clicker le plus proche (3 blocs).
-#   listclickers             Liste les bonhommes de neige clicker.
-#   reload                   Relit config.yml, messages.yml et models/, retire les cadeaux actifs, relance
-#                            l'apparition des cadeaux avec le nouveau settings.respawn_time_ticks. Si config.yml ou
-#                            messages.yml est invalide, rien n'est remplacé et le message donne le fichier et
-#                            l'erreur. playerdata.yml et snowmen.yml ne sont jamais relus.
-#   info <joueur>            Clics, niveau et clics du prochain niveau d'un joueur.
-#   Sans argument, la commande affiche les sous-commandes que vous pouvez utiliser. give, listclickers, reload et
-#   info marchent depuis la console ; les autres demandent un joueur.
+# Phases (dates:) : avant → avent → village → emplettes → cloture → apres.
+#   Gains de Flocons de avent jusqu'à fin-gains ; boutique de village jusqu'à cloture ; cadeaux entre joueurs de avent
+#   jusqu'à cloture ; livre « Mon Noël » donné à la connexion pendant cloture.
 #
-# Permissions (op par défaut) :
-#   shchristmaspresents.admin                  Toutes les sous-commandes.
-#   shchristmaspresents.admin.give, .setregion, .createclicker, .removeclicker, .listclickers, .reload, .info
-#                                              Une par sous-commande.
+# Commandes joueur (permission shchristmaspresents.use, accordée à tous) :
+#   /calendrier (alias /avent)     Calendrier de l'Avent : clic sur une porte pour l'ouvrir.
+#   /carte                         Carte de Noël et ses tampons.
+#   /sapin [offrir <nombre>]       Grand Sapin : jauge, contribution, offrandes de Flocons.
+#   /flocons                       Solde, gains du jour par source, ce qui reste avant chaque plafond.
+#   /cadeau <joueur> <montant>     Offre des Flocons emballés à un joueur.
 #
-# Les textes de la commande, du cooldown et de la réception d'une boule sont dans messages.yml.
+# Administration : /shchristmaspresents (alias /xmas et /scp). Permission shchristmaspresents.admin.<sous-commande>,
+# toutes réunies sous shchristmaspresents.admin (op par défaut). Tout marche depuis la console, sauf setregion,
+# createclicker et removeclicker. Sans argument : les sous-commandes que vous pouvez utiliser.
+#   give [joueur] [nombre]               Boules de neige magiques (sans joueur : à soi).
+#   setregion <1|2>                      Coin de la zone des cadeaux du village à votre position (region:).
+#   createclicker | removeclicker        Place, ou retire (3 blocs), un bonhomme de neige clicker.
+#   listclickers                         Liste les bonhommes de neige clicker.
+#   reload                               Relit config.yml, messages.yml et models/. Refusé si un fichier est invalide
+#                                        (l'ancienne config reste, le message donne le fichier et l'erreur). Les données
+#                                        ne sont jamais relues ; annee et base-de-donnees changent au redémarrage.
+#   info <joueur>                        Clicker, Flocons, portes, tampons, sapin, cadeaux et livraisons d'un joueur.
+#   flocons <joueur> <montant> <source>  Le seul chemin des gains : plafond du jour de la source, multiplicateurs, journal
+#                                        (shxmas_gains), versement (portefeuille.donner), points du sapin, barre
+#                                        d'action. Joueur hors ligne accepté. Hors des gains : rien n'est versé.
+#   multiplicateur <facteur> <minutes>   Multiplicateur global à partir de maintenant ; facteur 1 ou 0 minute l'arrête.
+#   compteur <joueur> <id> [n]           Ajoute n (1 par défaut) à un compteur (maisons, soirees, defis…), pendant les
+#                                        gains seulement (comme flocons ; hors gains, rien n'est compté).
+#   tampon <joueur> <id>                 Accorde un tampon de la carte (condition « commande »), pendant les gains.
+#   acheter <joueur> <article>           Achat pour un joueur en ligne (appelé par les menus) : phase, condition, limites,
+#                                        solde, retrait, commandes de l'article, message et son au joueur. L'achat se fait
+#                                        au tick suivant : rafraîchir le menu avec un petit délai.
+#   sapin info                           État du Grand Sapin.
+#   sapin cible <points>                 Nouvelle cible (0 = celle de sapin.cible).
+#   sapin ajouter <joueur> <points>      Points ajoutés à un joueur, sans plafond du jour (négatif pour corriger).
+#   sapin veillee                        Lance le palier de la Veillée si la jauge est à sapin.seuil-veillee % ou plus.
+#   drop <zone> <secondes> <nombre>      Pluie de cadeaux du ciel sur une zone de drops.zones.
+#   horloge <AAAA-MM-JJTHH:MM|reel>      Horloge de test (seulement si test.horloge-autorisee) : l'heure repart de cette
+#                                        date et continue d'avancer, même après un redémarrage ; reel = heure réelle.
+#   bilan                                Bilan de l'évènement dans bilan-<date>.yml et en console.
+#   tous [monde] <commande>              La commande, depuis la console, pour chaque joueur en ligne (de ce monde si
+#                                        donné) ; {joueur} = son pseudo. Le nombre de joueurs est noté en console.
 #
-# Placeholders (PlaceholderAPI) :
-#   %shchristmaspresents_clicks%   Clics du joueur sur les bonhommes de neige.
-#   %shchristmaspresents_level%    Niveau du joueur.
+# Placeholders %shchristmaspresents_<x>% (booléens true/false ; nombres sans séparateur, ou « 1 250 » avec le suffixe
+# _texte, ex. flocons_total_texte ; ids des sources, articles, tampons et compteurs en minuscules) :
+#   phase                    avant, avent, village, emplettes, cloture ou apres.
+#   phase_ligne              Une ligne qui décrit la phase (messages.yml, placeholders.phase-ligne).
+#   avant_<repère>           Temps avant un repère de dates: (« 4 j 3 h », « 3 h 12 min », « 12 min », « moins d'1 min »),
+#                            vide une fois passé.
+#   multiplicateur           Multiplicateur du joueur (global × fenêtres × personnel, plafonné) ; sans joueur : global.
+#   flocons_jour             Flocons reçus aujourd'hui.          flocons_jour_<source>   Reçus aujourd'hui par la source.
+#   plafond_<source>         Flocons de base encore plein tarif aujourd'hui (vide si la source n'a pas de plafond).
+#   flocons_total            Flocons reçus sur l'évènement.
+#   porte_jour               Porte du jour (1 à 25), 0 hors des jours du calendrier.
+#   porte_disponible         true si une porte peut être ouverte maintenant (celle du jour ou une à rattraper).
+#   porte_ligne              Une ligne sur la porte du jour (messages.yml, placeholders.porte-ligne).
+#   portes_ouvertes          Portes ouvertes.                    portes_palier           « 9/14 », jusqu'au prochain palier.
+#   sapin_pourcent           Jauge avec une décimale et un point (37.5).    sapin_pourcent_entier   37
+#   sapin_palier_suivant     Pourcentage du prochain palier, vide quand il n'y en a plus.
+#   sapin_points             Points comptés.                     sapin_cible             Cible.
+#   sapin_contribution       Points du joueur.                   sapin_contribution_jour Points du joueur aujourd'hui.
+#   offert_jour              Flocons offerts au sapin aujourd'hui.          sapin_contributeurs     Nombre de contributeurs.
+#   sapin_top_<n>_nom        Pseudo du n-ième contributeur (1 à 10).        sapin_top_<n>_valeur   Ses points.
+#   carte_tampons            Tampons obtenus.   carte_tampon_<id>   true/false.   carte_complete   true/false.
+#   compteur_<id>            Valeur d'un compteur.
+#   article_<id>_ligne       Ligne prête pour le menu (messages.yml, placeholders.article-ligne).
+#   article_<id>_peut        true si l'achat passerait maintenant.          article_<id>_prix      Prix.
+#   article_<id>_achats      Achats du joueur.                   article_<id>_limite     « 1 par jour, 3/10 achetées ».
+#   cadeaux_envoyes_jour     Cadeaux offerts aujourd'hui.        ile_jour                Petits cadeaux trouvés aujourd'hui.
+#   clicks, level            Clics et niveau au bonhomme de neige clicker.   clicks_jour   Clics d'aujourd'hui.
 #
-# Plusieurs serveurs de jeu : cadeaux et bonhommes de neige sont dans le monde de region.world, hébergé par un seul serveur.
-# Ne poser le plugin que sur celui-là : playerdata.yml (clics et niveau) n'a ainsi qu'un seul serveur qui l'écrit.
-# Rien à synchroniser, SHNetwork n'est pas utilisé.
+# Commandes de la config : lancées depuis la console, {joueur} = pseudo, {uuid}. Actions datées : {date}, {annee}, {id}.
+# Tous les textes sont dans messages.yml.
 
-snowball:
-  name: <gradient:#ff0000:#ffffff><bold>❄ Boule de neige magique ❄</bold></gradient>
-  lore:
-  - <dark_gray>ᴄᴏʟʟᴇᴄᴛɪᴏɴ ɴᴏᴇʟ 2025 ☃</dark_gray>
-  - <b></b>
-  - <gray>Lancez la sur un cadeau pour</gray>
-  - <gray>ouvrir celui ci !</gray>
-
+# Année de l'évènement : toutes les données sont rangées sous elle.
+annee: 2026
+fuseau: Europe/Paris
 debug: false
 
-settings:
-  respawn_time_ticks: 20
-  max_concurrent_gifts: 30
-  cooldown_seconds: 1
-  vertical_offset: 0.0
+base-de-donnees:
+  hote: 127.0.0.1
+  port: 3306
+  nom: minecraft
+  utilisateur: CHANGE_ME
+  mot-de-passe: CHANGE_ME
+  connexions: 3
 
-# CONFIGURATION DES RÉCOMPENSES ET MODÈLES
-rewards:
-  # Rareté "Commun"
-  common:
-    chance: 70
-    # Liste des modèles (sans extension) qui peuvent apparaître pour cette rareté
-    models:
-    - cadeau_rouge
-    commands:
-    - give %player% emerald 2
-    - msg %player% &aVous avez trouvé 2 émeraudes !
-  
-  # Rareté "Rare"
-  rare:
-    chance: 30
-    models:
-    - cadeau_bleu
-    commands:
-    - give %player% diamond 1
-    - msg %player% &bVous avez trouvé un diamant !
+test:
+  # Autorise /shchristmaspresents horloge. Toujours false sur le serveur de jeu.
+  horloge-autorisee: false
 
-# --- SECTION CLICKER ---
+# Repères (heure locale du fuseau, entre guillemets).
+dates:
+  avent: "2026-12-01T00:00"
+  village: "2026-12-12T20:00"
+  veillee: "2026-12-24T20:30"
+  fin-gains: "2026-12-31T23:59:59"
+  emplettes: "2027-01-01T00:00"
+  cloture: "2027-01-04T06:00"
+  apres: "2027-02-01T00:00"
+
+# Marge par défaut d'une action manquée pendant un arrêt : lancée au démarrage si son retard reste sous cette marge,
+# sinon notée « sautée » en console.
+rattrapage-minutes: 180
+
+# Actions datées : chaque id ne part qu'une fois (gardé en base, même après un redémarrage). Pour relancer une action
+# déjà partie, lui donner un autre id.
+actions:
+  ouverture-village:
+    quand: "2026-12-12T20:00"
+    rattrapage-minutes: 60
+    commandes:
+      - "say Le village de Noël est ouvert !"
+
+# Actions quotidiennes : chaque jour de du à au, à heure ; id = <id>-<date>.
+chaque-jour:
+  rappel-emplettes:
+    du: "2027-01-01"
+    au: "2027-01-03"
+    heure: "18:00"
+    commandes:
+      - "say La boutique de Noël ferme bientôt !"
+
+# Multiplicateurs datés. qui: tous, ou sous-mediane (joueurs dont le total de l'évènement est sous la médiane relevée
+# au début de la fenêtre, parmi ceux qui ont déjà gagné quelque chose ; ceux qui n'ont rien gagné en profitent aussi).
+fenetres:
+  ouverture-village:
+    debut: "2026-12-12T20:00"
+    fin: "2026-12-12T21:00"
+    facteur: 2
+    qui: tous
+  rattrapage:
+    debut: "2026-12-26T00:00"
+    fin: "2026-12-28T00:00"
+    facteur: 2
+    qui: sous-mediane
+
+# Plafond du produit des multiplicateurs (global × fenêtres × personnel).
+multiplicateur-max: 3
+
+# Portefeuille des Flocons : commandes de versement et de retrait, solde lu par placeholder (joueur en ligne).
+# Un retrait n'est confirmé (achat livré, offrande comptée, cadeau emballé) qu'une fois vu sur le solde.
+portefeuille:
+  donner: "points give {joueur} {montant}"
+  retirer: "points take {joueur} {montant}"
+  solde-placeholder: "%playerpoints_points%"
+  # Ticks d'attente d'un versement ou d'un retrait sur le solde ; au-delà, un retrait est annulé côté plugin.
+  attente-ticks: 60
+
+# Sources de gains (/shchristmaspresents flocons ... <source>).
+#   plafond-jour     Flocons de base comptés plein tarif par jour et par joueur (0 = pas de plafond).
+#   au-dela          Facteur de la part au-delà du plafond (0.25 = un quart ; 0 = plus rien).
+#   multiplicateurs  false : ni multiplicateur global, ni fenêtre, ni bonus de retour.
+#   sapin            Points de jauge du sapin par Flocon de base.     sapin-fixe   Points de jauge par gain.
+# Nom affiché et barre d'action de chaque source : messages.yml, flocons.sources et flocons.gains.
+sources:
+  porte:
+    sapin-fixe: 5
+  defi:
+    plafond-jour: 40
+    sapin-fixe: 10
+  village:
+    plafond-jour: 80
+    au-dela: 0.25
+    sapin-fixe: 1
+  ile:
+    multiplicateurs: true
+  temps:
+    plafond-jour: 40
+  vote:
+    sapin-fixe: 20
+  maison:
+    sapin-fixe: 5
+  parkour:
+    multiplicateurs: true
+  soiree:
+    sapin-fixe: 10
+  sapin-palier:
+    multiplicateurs: false
+  cadeau-recu:
+    multiplicateurs: false
+  drop:
+    multiplicateurs: true
+  bienvenue:
+    multiplicateurs: false
+  retour:
+    multiplicateurs: false
+  admin:
+    multiplicateurs: false
+
+calendrier:
+  # Date de la porte 1 ; la porte N s'ouvre N - 1 jours plus tard à 00:00.
+  premier-jour: "2026-12-01"
+  portes: 25
+  # Une porte d'un jour passé reste ouvrable jusqu'à N + rattrapage-jours à 23:59.
+  rattrapage-jours: 3
+  # Minutes de jeu au total (statistique du jeu) pour ouvrir une porte.
+  temps-de-jeu-min: 30
+  # Comptes d'une même connexion (empreinte d'IP, jamais l'adresse elle-même) qui peuvent ouvrir chaque porte.
+  comptes-par-ip: 2
+  # Flocons de bienvenue à la première porte ouverte de l'évènement (source bienvenue).
+  bienvenue: 100
+  # Porte au contenu spécial (objets menu.objets-speciale).
+  porte-speciale: 25
+  # Flocons (source porte) et commandes de chaque porte ; defaut pour les portes sans section.
+  recompenses:
+    defaut:
+      flocons: 30
+    "25":
+      flocons: 130
+      commandes:
+        - "give {joueur} diamond 1"
+  # Commandes à N portes ouvertes.
+  paliers:
+    "7":
+      - "give {joueur} emerald 3"
+    "14":
+      - "give {joueur} emerald 6"
+    "21":
+      - "give {joueur} emerald 9"
+  menu:
+    lignes: 6
+    # Case de chaque porte, de la 1 à la 25.
+    cases:
+      - 10
+      - 11
+      - 12
+      - 13
+      - 14
+      - 15
+      - 16
+      - 19
+      - 20
+      - 21
+      - 22
+      - 23
+      - 24
+      - 25
+      - 28
+      - 29
+      - 30
+      - 31
+      - 32
+      - 33
+      - 34
+      - 39
+      - 40
+      - 41
+      - 49
+    case-info: 4
+    cadre: BLACK_STAINED_GLASS_PANE
+    # Objet de chaque état (materiau, modele = item_model, lueur, tete = texture base64 d'une PLAYER_HEAD).
+    objets:
+      a-venir:
+        materiau: GRAY_SHULKER_BOX
+      ouvrable:
+        materiau: RED_SHULKER_BOX
+        lueur: true
+      rattrapable:
+        materiau: ORANGE_SHULKER_BOX
+      ouverte:
+        materiau: LIME_STAINED_GLASS_PANE
+      manquee:
+        materiau: BLACK_STAINED_GLASS_PANE
+    objets-speciale:
+      ouvrable:
+        materiau: CHEST
+        lueur: true
+      rattrapable:
+        materiau: CHEST
+
+sapin:
+  # Points pour 100 % (sapin cible <points> la remplace sans toucher au fichier).
+  cible: 40000
+  # La jauge démarre à ce pourcentage : pourcent = depart-pourcent + 100 × points / cible.
+  depart-pourcent: 10
+  # Points comptés par joueur et par jour (offrandes et contributions des sources).
+  plafond-joueur-jour: 600
+  # Points sur l'évènement pour être contributeur (commandes-contributeur des paliers).
+  contribution-min: 50
+  # Jauge minimale pour le palier marqué veillee (sapin veillee).
+  seuil-veillee: 90
+  # Boutons d'offrande du menu /sapin.
+  offrandes:
+    - 10
+    - 50
+    - 100
+    - 500
+  # Chaque palier part une fois : commandes-serveur, puis commandes-contributeur pour chaque contributeur (en ligne :
+  # tout de suite ; hors ligne : à sa connexion suivante). veillee: true = seulement par sapin veillee.
+  paliers:
+    "25":
+      commandes-serveur:
+        - "say Le Grand Sapin est à 25 % !"
+        - "shchristmaspresents multiplicateur 2 60"
+      commandes-contributeur:
+        - "shchristmaspresents flocons {joueur} 100 sapin-palier"
+    "50":
+      commandes-serveur:
+        - "say Le Grand Sapin est à 50 % !"
+      commandes-contributeur:
+        - "shchristmaspresents flocons {joueur} 100 sapin-palier"
+    "75":
+      commandes-serveur:
+        - "say Le Grand Sapin est à 75 % !"
+      commandes-contributeur:
+        - "shchristmaspresents flocons {joueur} 100 sapin-palier"
+    "100":
+      veillee: true
+      commandes-serveur:
+        - "say Le Grand Sapin brille de mille feux !"
+      commandes-contributeur:
+        - "give {joueur} nether_star 1"
+  menu:
+    lignes: 4
+    case-jauge: 4
+    case-contribution: 13
+    case-top: 31
+    cases-offrandes:
+      - 19
+      - 21
+      - 23
+      - 25
+    cadre: BLACK_STAINED_GLASS_PANE
+
+carte:
+  # Monde du village : la première entrée pendant la phase village pose les tampons « auto: premiere-visite ».
+  monde-village: Christmas
+  # condition : « auto: premiere-visite », « compteur: <id> >= N », « niveau-clicker >= N » ou « commande ».
+  # Noms et descriptions : messages.yml, carte.tampons.<id>.
+  tampons:
+    village-1:
+      case: 11
+      condition: "auto: premiere-visite"
+    village-2:
+      case: 12
+      condition: "auto: premiere-visite"
+    portes:
+      case: 13
+      condition: "compteur: portes >= 7"
+    maisons:
+      case: 14
+      condition: "compteur: maisons >= 10"
+    parkour:
+      case: 15
+      condition: "commande"
+    clicker:
+      case: 20
+      condition: "niveau-clicker >= 15"
+    soirees:
+      case: 21
+      condition: "compteur: soirees >= 3"
+    cadeau:
+      case: 22
+      condition: "compteur: cadeaux-envoyes >= 1"
+    defis:
+      case: 23
+      condition: "compteur: defis >= 20"
+    sapin:
+      case: 24
+      condition: "compteur: offert >= 500"
+  # Carte complète, une fois.
+  commandes-complete:
+    - "say {joueur} a complété sa carte de Noël !"
+  objet-manquant:
+    materiau: GRAY_DYE
+  objet-obtenu:
+    materiau: LIME_DYE
+    lueur: true
+  menu:
+    lignes: 4
+    case-info: 4
+    cadre: BLACK_STAINED_GLASS_PANE
+
+# Boutique (de village à cloture). Chaque article : prix, limite-jour et limite-total (0 = sans limite), requiert (un
+# autre article déjà acheté), commandes. Un article sans commande ne se vend pas. Noms : messages.yml, boutique.articles.
+boutique:
+  articles:
+    boules:
+      prix: 50
+      limite-total: 1
+      commandes:
+        - "shchristmaspresents give {joueur} 10"
+    cle:
+      prix: 500
+      limite-jour: 1
+      limite-total: 10
+      commandes:
+        - "give {joueur} tripwire_hook 1"
+    titre-givre:
+      prix: 800
+      limite-total: 1
+      commandes:
+        - "give {joueur} name_tag 1"
+    titre-givre-anime:
+      prix: 1000
+      limite-total: 1
+      requiert: titre-givre
+      commandes:
+        - "give {joueur} name_tag 1"
+
+# /cadeau entre joueurs.
+cadeaux:
+  montant-min: 20
+  montant-max: 500
+  envoyes-par-jour: 3
+  recus-par-jour: 5
+  # Heures de jeu des deux côtés.
+  temps-de-jeu-heures: 5
+  # Refuse un cadeau entre comptes de la même connexion (dernière IP connue).
+  empreintes-differentes: true
+  # Points du sapin pour le donneur.
+  sapin-points: 5
+  objet:
+    materiau: PAPER
+    modele: "minecraft:red_shulker_box"
+    lueur: true
+
+# Petits cadeaux sur l'île pendant les gains : une chance par catégorie et par action, max-jour par joueur.
+ile:
+  mondes:
+    - SuperiorWorld
+  max-jour: 4
+  chances:
+    minage: 0.002
+    peche: 0.05
+    recolte: 0.003
+    combat: 0.005
+  # Minage : blocs cassés par le joueur (survie). Récolte : toute culture mûre (Ageable à l'âge maximal).
+  blocs-minage:
+    - STONE
+    - COBBLESTONE
+    - DEEPSLATE
+    - COAL_ORE
+    - IRON_ORE
+  # Flocons au clic droit (source ile).
+  flocons-min: 3
+  flocons-max: 8
+  objet:
+    materiau: PAPER
+    modele: "minecraft:lime_shulker_box"
+    lueur: true
+
+# Pluie de cadeaux du ciel (/shchristmaspresents drop). Les cadeaux tombent depuis le haut de la zone.
+drops:
+  # Les cadeaux restants disparaissent à la fin de la pluie + ce délai.
+  disparition-secondes: 30
+  # Contour lumineux des cadeaux au sol.
+  lueur-entite: true
+  zones:
+    village:
+      monde: world
+      x1: -10
+      y1: 100
+      z1: -10
+      x2: 10
+      y2: 100
+      z2: 10
+  # Tirage pondéré à chaque cadeau ramassé.
+  recompenses:
+    flocons:
+      poids: 80
+      commandes:
+        - "shchristmaspresents flocons {joueur} 5 drop"
+    diamant:
+      poids: 20
+      commandes:
+        - "give {joueur} diamond 1"
+  objet:
+    materiau: PAPER
+    modele: "minecraft:red_shulker_box"
+    lueur: true
+
+# Retour des absents : connexion pendant les gains après absent-jours sans venir (dernière connexion connue du
+# serveur). Une fois par évènement : commandes, et multiplicateur personnel pendant multiplicateur-heures.
+retour:
+  actif: true
+  absent-jours: 14
+  multiplicateur: 2
+  multiplicateur-heures: 72
+  commandes:
+    - "give {joueur} cake 1"
+
+# Sons, chacun lié à une action ou un message : « NOM [volume] [hauteur] », ou clé (minecraft:...). Vide = muet.
+sons:
+  porte: "ENTITY_PLAYER_LEVELUP 0.7 1.4"
+  porte-speciale: "UI_TOAST_CHALLENGE_COMPLETE 0.8 1"
+  refus: "ENTITY_VILLAGER_NO 0.6 1"
+  achat: "ENTITY_EXPERIENCE_ORB_PICKUP 1 1"
+  offrande: "BLOCK_AMETHYST_BLOCK_CHIME 1 1.2"
+  tampon: "BLOCK_NOTE_BLOCK_CHIME 1 1.5"
+  carte-complete: "UI_TOAST_CHALLENGE_COMPLETE 1 1"
+  cadeau-envoye: "ENTITY_ITEM_PICKUP 1 1"
+  cadeau-recu: "BLOCK_NOTE_BLOCK_BELL 1 1.2"
+  cadeau-ouvert: "ENTITY_PLAYER_LEVELUP 0.7 1.6"
+  petit-cadeau: "ENTITY_ITEM_PICKUP 0.8 1.4"
+  petit-cadeau-ouvert: "BLOCK_NOTE_BLOCK_CHIME 0.8 1.8"
+  drop: "ENTITY_CHICKEN_EGG 1 1.4"
+  retour: "UI_TOAST_IN 1 1"
+  recap: "ITEM_BOOK_PAGE_TURN 1 1"
+
+# ---------------------------------------------------------------- cadeaux du village et clicker
+
+# Cadeaux du village : ils apparaissent dans zone et s'ouvrent avec une boule de neige magique.
+village:
+  # Un essai d'apparition tous les apparition-ticks, au plus max-cadeaux en même temps.
+  apparition-ticks: 20
+  max-cadeaux: 30
+  # Secondes d'attente entre deux cadeaux ouverts par un joueur.
+  attente-secondes: 1
+  decalage-vertical: 0.0
+  # Zone des cadeaux (/shchristmaspresents setregion 1|2).
+  zone:
+    monde: world
+    x1: 10.0
+    y1: 70.0
+    z1: 10.0
+    x2: -10.0
+    y2: 64.0
+    z2: -10.0
+  # Raretés : chance (poids), modeles (fichiers de models/ sans extension), commandes (%player% ou {joueur} ;
+  # « msg:<MiniMessage> » = message au joueur), feu-artifice (sans dégâts). Titre court : messages.yml village.titres.
+  raretes:
+    commun:
+      chance: 68
+      modeles:
+        - cadeau_rouge
+      commandes:
+        - "shchristmaspresents flocons %player% 2 village"
+    rare:
+      chance: 30
+      modeles:
+        - cadeau_bleu
+      commandes:
+        - "shchristmaspresents flocons %player% 4 village"
+    dore:
+      chance: 2
+      modeles:
+        - rare
+      feu-artifice: true
+      commandes:
+        - "shchristmaspresents flocons %player% 25 village"
+
+# Bonhommes de neige clicker (jamais blessés : ni pluie ni chaleur). Textes : messages.yml clicker.*.
 clicker:
-  max_cps: 6
-  click_sound: BLOCK_SNOW_BREAK
-  
-  # Action bar affiche progression actuelle / requis pour niveau suivant
-  action_bar: '<gradient:#ff0000:#ffffff>Lvl %level% | Clics: %clicks%/%required%</gradient>
-    | <gradient:#ffffff:#ff0000>Prochain gain: %next_reward% ❄</gradient>'
-  
-  subtitle_on_click: ''
-  
-  levelup_message: <bold><green>FÉLICITATIONS !</green></bold> <gray>Vous passez niveau
-    <yellow>%level%</yellow> !</gray>
-  
-  # -- ALGORITHME MATHÉMATIQUE (INFINI) --
-  algorithm:
-    # Nombre de clics pour le niveau 1
-    base_clicks: 50
-    
-    # Difficulté : Multiplie le coût précédent. 
-    # 2.5 signifie : Niveau 1 = 50. Niveau 2 = 50 * 2.5 = 125. Niveau 3 = 125 * 2.5 ≈ 312.
-    multiplier: 1.5
-    
-    # Récompenses (Boules de neige)
-    base_reward: 1
-    # Combien de boules EN PLUS on gagne à chaque nouveau niveau
-    reward_increase_per_level: 1
-  
-  # -- ANTI AUTO CLICK AFK --
-  anti_afk:
-    # Au bout de combien de clics SANS bouger on bloque le joueur ?
-    max_static_clicks: 100
-    
-    # De quelle distance (en blocs) le joueur doit bouger pour reset le compteur ?
-    min_move_distance: 0.4
-    
-    # Message affiché en gros (subtitle) quand bloqué
-    warning_message: <red><bold>ANTI-AFK</bold></red> <gray>Bougez pour continuer
-      à cliquer</gray>
-
-region:
-  world: world
-  # /shchristmaspresents setregion [1-2]
-  x1: 10.0
-  y1: 70.0
-  z1: 10.0
-  x2: -10.0
-  y2: 64.0
-  z2: -10.0
+  max-cps: 6
+  son: BLOCK_SNOW_BREAK
+  # Clics pour le niveau 1, multipliés par multiplicateur-clics à chaque niveau.
+  clics-niveau-1: 50
+  multiplicateur-clics: 1.5
+  # Boules de neige au niveau N : boules-base + N × boules-par-niveau (192 au plus).
+  boules-base: 1
+  boules-par-niveau: 1
+  anti-afk:
+    # Clics sans bouger de distance-min blocs avant le blocage.
+    clics-immobiles: 100
+    distance-min: 0.4
