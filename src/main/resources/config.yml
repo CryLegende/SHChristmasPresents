@@ -511,6 +511,14 @@ sons:
 
 # Cadeaux du village : ils apparaissent dans zone et s'ouvrent avec une boule de neige magique.
 village:
+  # Village fermé hors des phases village et emplettes : un joueur qui se connecte dans ce monde part au spawn
+  # (commandes-connexion, lancées en console), un téléport vers ce monde est annulé (message village.ferme).
+  # Le droit shchristmaspresents.village.acces (op par défaut) passe quand même.
+  fermeture:
+    actif: true
+    monde: Christmas
+    commandes-connexion:
+      - "spawn {joueur}"
   # Un essai d'apparition tous les apparition-ticks, au plus max-cadeaux en même temps.
   apparition-ticks: 20
   max-cadeaux: 30

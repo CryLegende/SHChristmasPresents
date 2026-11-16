@@ -8,6 +8,7 @@ import org.Cry_Legende.sHChristmasPresents.carte.Compteurs;
 import org.Cry_Legende.sHChristmasPresents.clicker.Clicker;
 import org.Cry_Legende.sHChristmasPresents.commandes.CommandeAdmin;
 import org.Cry_Legende.sHChristmasPresents.commandes.CommandesJoueur;
+import org.Cry_Legende.sHChristmasPresents.commandes.ListeCommandes;
 import org.Cry_Legende.sHChristmasPresents.commun.Empreintes;
 import org.Cry_Legende.sHChristmasPresents.commun.Messages;
 import org.Cry_Legende.sHChristmasPresents.commun.MenusListener;
@@ -36,6 +37,7 @@ import org.Cry_Legende.sHChristmasPresents.stockage.Base;
 import org.Cry_Legende.sHChristmasPresents.stockage.Etat;
 import org.Cry_Legende.sHChristmasPresents.village.BouleDeNeige;
 import org.Cry_Legende.sHChristmasPresents.village.CadeauxVillage;
+import org.Cry_Legende.sHChristmasPresents.village.Fermeture;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -105,6 +107,8 @@ public final class SHChristmasPresents extends JavaPlugin {
     private CadeauxVillage village;
     private Clicker clicker;
     private Connexions connexions;
+    private final Fermeture fermeture = new Fermeture(this);
+    private ListeCommandes listeCommandes;
     private volatile Map<String, Son> sons = Map.of();
     private final Set<UUID> verrous = new HashSet<>();
     private BukkitTask ticker;
@@ -202,8 +206,9 @@ public final class SHChristmasPresents extends JavaPlugin {
             }
         });
         connexions = new Connexions(this);
+        listeCommandes = new ListeCommandes(this);
         for (Listener l : List.of(new MenusListener(this::sync), new ObjetsMarques(this), connexions, cadeaux, petitsCadeaux,
-                drops, retour, boules, village, clicker)) {
+                drops, retour, boules, village, clicker, fermeture, listeCommandes)) {
             getServer().getPluginManager().registerEvents(l, this);
         }
         enregistrer("shchristmaspresents", new CommandeAdmin(this));
@@ -296,6 +301,7 @@ public final class SHChristmasPresents extends JavaPlugin {
         petitsCadeaux.configurer(c.getConfigurationSection("ile"));
         drops.configurer(c.getConfigurationSection("drops"));
         retour.configurer(c.getConfigurationSection("retour"));
+        fermeture.configurer(c.getConfigurationSection("village.fermeture"));
         Map<String, Son> lus = new HashMap<>();
         ConfigurationSection s = c.getConfigurationSection("sons");
         if (s != null) {
@@ -317,6 +323,7 @@ public final class SHChristmasPresents extends JavaPlugin {
         ZonedDateTime maintenant = horloge.maintenant();
         actions.verifier();
         fenetres.verifier(maintenant);
+        listeCommandes.verifier();
         if (dates.phase(maintenant) == Phase.VILLAGE) {
             for (Player joueur : Bukkit.getOnlinePlayers()) {
                 carte.visite(joueur);

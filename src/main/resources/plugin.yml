@@ -41,6 +41,9 @@ permissions:
   shchristmaspresents.use:
     description: Commandes joueur de Noël (/calendrier, /carte, /sapin, /flocons, /cadeau)
     default: true
+  shchristmaspresents.village.acces:
+    description: Entrer dans le village de Noël quand il est fermé (préparation)
+    default: op
   shchristmaspresents.admin:
     description: Toutes les sous-commandes de /shchristmaspresents
     default: op

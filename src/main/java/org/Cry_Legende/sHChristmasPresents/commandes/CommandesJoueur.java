@@ -39,6 +39,11 @@ public final class CommandesJoueur implements CommandExecutor, TabCompleter {
     }
 
     private void executer(Player joueur, String commande, String[] args) {
+        // Hors de l'Avent, du village et des emplettes : comme une commande inconnue (les admins passent, pour tester).
+        if (!ListeCommandes.ouvertes(plugin.phase()) && !joueur.hasPermission("shchristmaspresents.admin")) {
+            plugin.messages().envoyer(joueur, "commande-fermee");
+            return;
+        }
         switch (commande) {
             case "calendrier" -> plugin.calendrier().ouvrirMenu(joueur);
             case "carte" -> plugin.carte().ouvrirMenu(joueur);

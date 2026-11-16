@@ -9,6 +9,8 @@ prefix: "&7&l« &c&lSH &8&l» &7"
 cooldown_message: "<red>Doucement ! Il y aura des cadeaux pour tout le monde :)</red>"
 snowball_received: "<white><bold>« <red>SH</red> » </bold>Tu as reçu une <gradient:#ff0000:#ffffff><bold>boule de neige magique</bold></gradient> !</white>"
 usage: "Utilisation : &c/shchristmaspresents <%subcommands%>"
+# Commande joueur tapée hors de l'Avent, du village et des emplettes : même texte qu'une commande inconnue.
+commande-fermee: "&7&l« &f&lSH &8&l» &fCommande inconnue, essayez autre chose"
 player-only: "Cette commande est &créservée aux joueurs&7."
 player-not-found: "Le joueur &c%player% &7n'est pas en ligne."
 give-usage: "Utilisation : &c/shchristmaspresents give <joueur> [nombre]"
@@ -45,6 +47,8 @@ clicker:
 
 # Titre court à l'ouverture d'un cadeau de cette rareté (rewards.<rareté> dans config.yml). Absent = pas de titre.
 village:
+  # Téléport refusé vers le village fermé (village.fermeture dans config.yml).
+  ferme: "&7&l« &e&lSH &8&l» &7Ce monde est fermé pour le moment."
   titres:
     dore: "&6&lCadeau doré !"
   sous-titres:
