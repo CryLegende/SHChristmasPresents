@@ -7,6 +7,7 @@ import com.google.gson.JsonParser;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.data.BlockData;
+import org.Cry_Legende.sHChristmasPresents.rendu.Piece;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
@@ -24,62 +25,82 @@ import java.util.Map;
 import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 
-/** Modèles BDEngine (models/*.bdengine) des cadeaux du village : lus une fois, parties prêtes à poser. */
+/** Modèles BDEngine (models/*.bdengine) des cadeaux du village : lus une fois, pièces prêtes à montrer par paquets. */
 final class Modeles {
 
-    enum Type {ITEM, BLOCK}
-
-    static final class Partie {
-        final Type type;
-        final Matrix4f matrice;
-        Material materiau;
-        BlockData bloc;
-        String texture;
-
-        Partie(Type type, Matrix4f matrice) {
-            this.type = type;
-            this.matrice = matrice;
-        }
-    }
-
+    /**
+     * Un modèle prêt à poser : pièces recentrées (pied du modèle à l'origine, centré en x et z), dimensions, et ce
+     * qu'il faut pour animer le couvercle : la boîte (la plus grosse pièce), les pièces du couvercle (tout ce qui est
+     * au-dessus de la moitié haute de la boîte : couvercle, nœud, paillettes) et le pivot (dessus de la boîte).
+     */
     static final class Modele {
         final String nom;
-        final List<Partie> parties;
-        float largeur;
-        float hauteur;
-        Vector3f recentrage;
+        final List<Piece> pieces;
+        final float largeur;
+        final float hauteur;
+        final int boite;
+        final boolean[] couvercle;
+        final Vector3f pivot;
+        final float basBoite;
+        final float hautBoite;
 
-        Modele(String nom, List<Partie> parties) {
+        Modele(String nom, List<Piece> brutes) {
             this.nom = nom;
-            this.parties = parties;
-            dimensions();
-        }
-
-        private void dimensions() {
-            if (parties.isEmpty()) {
-                largeur = 1f;
-                hauteur = 1f;
-                recentrage = new Vector3f();
-                return;
-            }
             float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE, minZ = Float.MAX_VALUE;
             float maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE, maxZ = -Float.MAX_VALUE;
-            Vector3f position = new Vector3f();
-            Vector3f echelle = new Vector3f();
-            for (Partie partie : parties) {
-                partie.matrice.getTranslation(position);
-                partie.matrice.getScale(echelle);
-                float dx = Math.abs(echelle.x) / 2f, dy = Math.abs(echelle.y) / 2f, dz = Math.abs(echelle.z) / 2f;
-                minX = Math.min(minX, position.x - dx);
-                maxX = Math.max(maxX, position.x + dx);
-                minY = Math.min(minY, position.y - dy);
-                maxY = Math.max(maxY, position.y + dy);
-                minZ = Math.min(minZ, position.z - dz);
-                maxZ = Math.max(maxZ, position.z + dz);
+            for (Piece p : brutes) {
+                for (Vector3f c : p.coins()) {
+                    minX = Math.min(minX, c.x); maxX = Math.max(maxX, c.x);
+                    minY = Math.min(minY, c.y); maxY = Math.max(maxY, c.y);
+                    minZ = Math.min(minZ, c.z); maxZ = Math.max(maxZ, c.z);
+                }
             }
-            largeur = Math.max(0.6f, Math.max(maxX - minX, maxZ - minZ) + 0.1f);
-            hauteur = Math.max(0.6f, (maxY - minY) + 0.1f);
-            recentrage = new Vector3f(-(minX + maxX) / 2f, -minY, -(minZ + maxZ) / 2f);
+            Matrix4f recentrage = new Matrix4f().translation(-(minX + maxX) / 2f, -minY, -(minZ + maxZ) / 2f);
+            List<Piece> pieces = new ArrayList<>(brutes.size());
+            for (Piece p : brutes) {
+                pieces.add(p.avec(new Matrix4f(recentrage).mul(p.matrice()), ""));
+            }
+            this.pieces = List.copyOf(pieces);
+            this.largeur = Math.max(0.5f, Math.max(maxX - minX, maxZ - minZ));
+            this.hauteur = Math.max(0.4f, maxY - minY);
+            int grosse = 0;
+            for (int i = 1; i < pieces.size(); i++) {
+                if (pieces.get(i).volume() > pieces.get(grosse).volume()) {
+                    grosse = i;
+                }
+            }
+            this.boite = grosse;
+            float[] b = boite(pieces.get(grosse));
+            this.basBoite = b[1];
+            this.hautBoite = b[4];
+            float milieu = (b[1] + b[4]) / 2f;
+            float seuil = (milieu + b[4]) / 2f;
+            this.couvercle = new boolean[pieces.size()];
+            for (int i = 0; i < pieces.size(); i++) {
+                if (i != grosse) {
+                    float[] c = boite(pieces.get(i));
+                    couvercle[i] = (c[1] + c[4]) / 2f > seuil;
+                }
+            }
+            this.pivot = new Vector3f((b[0] + b[3]) / 2f, b[4], (b[2] + b[5]) / 2f);
+        }
+
+        /** minX, minY, minZ, maxX, maxY, maxZ d'une pièce. */
+        private static float[] boite(Piece p) {
+            float[] r = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
+            for (Vector3f c : p.coins()) {
+                r[0] = Math.min(r[0], c.x); r[1] = Math.min(r[1], c.y); r[2] = Math.min(r[2], c.z);
+                r[3] = Math.max(r[3], c.x); r[4] = Math.max(r[4], c.y); r[5] = Math.max(r[5], c.z);
+            }
+            return r;
+        }
+
+        int nombreCouvercle() {
+            int n = 0;
+            for (boolean c : couvercle) {
+                n += c ? 1 : 0;
+            }
+            return n;
         }
     }
 
@@ -105,7 +126,7 @@ final class Modeles {
                         .replace("\n", "").replace("\r", "").replace(" ", "");
                 String court = nom.replace(".bdengine", "").replace(".txt", "");
                 Modele modele = lire(court, contenu);
-                if (modele != null && !modele.parties.isEmpty()) {
+                if (modele != null && !modele.pieces.isEmpty()) {
                     modeles.put(court, modele);
                 }
             } catch (Exception e) {
@@ -130,16 +151,16 @@ final class Modeles {
                     json.append(ligne);
                 }
                 JsonElement racine = JsonParser.parseString(json.toString());
-                List<Partie> parties = new ArrayList<>();
+                List<Piece> parties = new ArrayList<>();
                 parcourir(racine, new Matrix4f(), parties);
-                return new Modele(nom, parties);
+                return parties.isEmpty() ? null : new Modele(nom, parties);
             }
         } catch (Exception e) {
             return null;
         }
     }
 
-    private static void parcourir(JsonElement element, Matrix4f parent, List<Partie> parties) {
+    private static void parcourir(JsonElement element, Matrix4f parent, List<Piece> parties) {
         if (element.isJsonArray()) {
             for (JsonElement enfant : element.getAsJsonArray()) {
                 parcourir(enfant, parent, parties);
@@ -168,20 +189,12 @@ final class Modeles {
         Matrix4f cumulee = new Matrix4f(parent).mul(locale);
         boolean bloc = obj.has("blockState") || obj.has("block_state") || (obj.has("isBlockDisplay") && obj.get("isBlockDisplay").getAsBoolean());
         boolean objet = obj.has("tagHead") || obj.has("item") || (obj.has("isItemDisplay") && obj.get("isItemDisplay").getAsBoolean());
-        if (bloc || objet) {
-            Partie partie = new Partie(bloc ? Type.BLOCK : Type.ITEM, new Matrix4f(cumulee));
-            if (bloc) {
-                partie.bloc = donneesBloc(nomBloc(obj));
-            } else {
-                String texture = texture(obj);
-                if (texture != null) {
-                    partie.texture = texture;
-                    partie.materiau = Material.PLAYER_HEAD;
-                } else {
-                    partie.materiau = materiau(nomObjet(obj));
-                }
-            }
-            parties.add(partie);
+        if (bloc) {
+            parties.add(Piece.bloc(donneesBloc(nomBloc(obj)), cumulee, ""));
+        } else if (objet) {
+            String texture = texture(obj);
+            parties.add(texture != null ? Piece.objet(Material.PLAYER_HEAD, texture, cumulee, "")
+                    : Piece.objet(materiau(nomObjet(obj)), null, cumulee, ""));
         }
         if (obj.has("children")) {
             parcourir(obj.get("children"), cumulee, parties);
@@ -268,6 +281,9 @@ final class Modeles {
         try {
             if (obj.has("tagHead")) {
                 return obj.getAsJsonObject("tagHead").get("Value").getAsString();
+            }
+            if (obj.has("defaultTextureValue") && obj.get("defaultTextureValue").isJsonPrimitive()) {
+                return obj.get("defaultTextureValue").getAsString();
             }
             if (obj.has("item")) {
                 return obj.getAsJsonObject("item").getAsJsonObject("tag").getAsJsonObject("SkullOwner")

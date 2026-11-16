@@ -32,12 +32,12 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class Boutique {
 
-    public record Article(String id, int prix, int limiteJour, int limiteTotal, String requiert, List<String> commandes) {
+    public record Article(String id, int prix, int limiteJour, int limiteTotal, String requiert, java.time.ZonedDateTime des, List<String> commandes) {
     }
 
     /** Pourquoi un article peut ou ne peut pas être acheté maintenant. */
     public enum Etat {
-        OK, FERMEE_AVANT, FERMEE, INDISPONIBLE, REQUIERT, DEJA, LIMITE_TOTALE, LIMITE_JOUR, MANQUE
+        OK, FERMEE_AVANT, FERMEE, INDISPONIBLE, BIENTOT, REQUIERT, DEJA, LIMITE_TOTALE, LIMITE_JOUR, MANQUE
     }
 
     private static final class Achats {
@@ -68,9 +68,18 @@ public final class Boutique {
                     continue;
                 }
                 String requiert = a.getString("requiert", "");
+                java.time.ZonedDateTime des = null;
+                String texteDes = a.getString("des", "");
+                if (texteDes != null && !texteDes.isBlank()) {
+                    try {
+                        des = java.time.LocalDateTime.parse(texteDes.trim()).atZone(plugin.horloge().zone());
+                    } catch (java.time.format.DateTimeParseException e) {
+                        plugin.getLogger().warning("boutique.articles." + id + ".des illisible (AAAA-MM-JJTHH:MM) : " + texteDes);
+                    }
+                }
                 lus.put(id, new Article(id, Math.max(0, a.getInt("prix", 0)), Math.max(0, a.getInt("limite-jour", 0)),
                         Math.max(0, a.getInt("limite-total", 0)), requiert == null || requiert.isBlank() ? null : requiert.trim(),
-                        LectureConfig.textes(a, "commandes")));
+                        des, LectureConfig.textes(a, "commandes")));
             }
         }
         articles = java.util.Collections.unmodifiableMap(lus);
@@ -125,6 +134,9 @@ public final class Boutique {
             // Article pas encore rempli dans la config : il ne se vend pas
             return Etat.INDISPONIBLE;
         }
+        if (article.des() != null && maintenant.isBefore(article.des())) {
+            return Etat.BIENTOT;
+        }
         if (article.requiert() != null && achatsTotal(uuid, article.requiert()) < 1) {
             return Etat.REQUIERT;
         }
@@ -150,6 +162,7 @@ public final class Boutique {
             case OK -> m.brut("placeholders.article-ligne.ok");
             case FERMEE_AVANT, FERMEE -> m.brut("placeholders.article-ligne.fermee");
             case INDISPONIBLE -> m.brut("placeholders.article-ligne.indisponible");
+            case BIENTOT -> m.brut("placeholders.article-ligne.bientot", "{date}", Textes.date(article.des()));
             case REQUIERT -> m.brut("placeholders.article-ligne.requiert", "{article}", nom(article.requiert()));
             case DEJA -> m.brut("placeholders.article-ligne.deja");
             case LIMITE_TOTALE -> m.brut("placeholders.article-ligne.limite-totale");
@@ -209,6 +222,7 @@ public final class Boutique {
                     plugin.getLogger().warning("Achat de " + id + " refusé : l'article n'a aucune commande");
                     m.envoyer(joueur, "boutique.indisponible", "{article}", nom);
                 }
+                case BIENTOT -> m.envoyer(joueur, "boutique.bientot", "{article}", nom, "{date}", Textes.date(article.des()));
                 case REQUIERT -> m.envoyer(joueur, "boutique.requiert", "{article}", nom(article.requiert()));
                 case DEJA -> m.envoyer(joueur, "boutique.deja", "{article}", nom);
                 case LIMITE_TOTALE -> m.envoyer(joueur, "boutique.limite-totale", "{article}", nom);

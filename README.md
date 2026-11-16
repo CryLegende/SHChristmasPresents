@@ -33,14 +33,22 @@ Le moteur de Noël d'Opale. Tout tourne autour d'une horloge à l'heure de Paris
   s'ouvre qu'une fois.
 - **Petits cadeaux sur l'île**, **Drop** (pluie de cadeaux du ciel), **retour des absents**, livre **« Mon Noël »**
   pendant la clôture, **bilan** de l'évènement.
-- Et ce que faisait la 1.1 : cadeaux du village à ouvrir avec une boule de neige magique (rareté dorée en plus),
-  bonhommes de neige clicker.
+- **Cadeaux du village** à ouvrir avec une boule de neige magique (rareté dorée en plus) et **bonhommes de neige
+  clicker**, tous deux montrés par paquets (packetevents) : le serveur n'a aucune entité, chaque joueur proche reçoit
+  les siennes. Le couvercle des cadeaux tremble de temps en temps comme s'il voulait s'ouvrir (vitesse et taille par
+  rareté), le cadeau apparaît en grandissant et saute en s'ouvrant. Une boule lancée est suivie à chaque tick : un
+  cadeau traversé s'ouvre même si la boule ne s'y arrête pas. Un clic à la main explique quoi faire. Les cadeaux se
+  posent sur le vrai dessus des dalles, couches de neige et tapis, jamais sur un escalier, une barrière ou des feuilles,
+  ni sous une entité. Les bonhommes de neige (block displays) bougent la tête et les bras et sautent au clic.
 
 Les actions datées de l'évènement (ouverture du village, Veillée, Drop final…) sont dans `actions:` et `chaque-jour:` :
 chacune ne part qu'une fois, même après un redémarrage, et celle qui tombe pendant un arrêt part au démarrage si son
 retard reste dans sa marge.
 
-Utilisé sur : **Opale** (un seul serveur, rien à synchroniser).
+Une annonce périodique (`annonce:`) rappelle l'évènement dans le chat ; un article de la boutique peut attendre sa date de
+mise en vente (`des:`) ; la première visite du monde du village lance `carte.commandes-premiere-visite`.
+
+Utilisé sur : **Opale** (un seul serveur, rien à synchroniser). Demande **packetevents**.
 
 ## Commandes
 
@@ -86,6 +94,8 @@ par sous-commande, toutes sous `shchristmaspresents.admin` (op par défaut). Tou
 | `flocons_jour`, `flocons_jour_<source>`, `plafond_<source>`, `flocons_total` | Gains du jour, par source, reste avant le plafond, total |
 | `porte_jour`, `porte_disponible`, `porte_ligne`, `portes_ouvertes`, `portes_palier` | Calendrier |
 | `sapin_pourcent`, `sapin_pourcent_entier`, `sapin_palier_suivant`, `sapin_points`, `sapin_cible` | Jauge |
+| `sapin_pourcent_affiche`, `sapin_palier_suivant_affiche` | « 37 % », « 50 % » (avec le signe : un « % » seul à côté d'un placeholder casse la lecture des suivants) |
+| `date` | Jour de l'évènement (horloge du plugin, horloge de test comprise) en AAAAMMJJ, pour les conditions numériques |
 | `sapin_contribution`, `sapin_contribution_jour`, `offert_jour`, `sapin_contributeurs` | Contributions |
 | `sapin_top_<n>_nom`, `sapin_top_<n>_valeur` | Meilleurs contributeurs (1 à 10) |
 | `carte_tampons`, `carte_tampon_<id>`, `carte_complete`, `compteur_<id>` | Carte de Noël |
@@ -103,8 +113,12 @@ Fichiers par défaut, avec des valeurs d'exemple. Cliquez sur un fichier pour l'
 plugins/SHChristmasPresents/
 ├── <a href="src/main/resources/config.yml">config.yml</a>
 ├── <a href="src/main/resources/messages.yml">messages.yml</a>
+├── bonhommes.yml     places des bonhommes de neige clicker (écrit par createclicker / removeclicker)
 └── models/          modèles BDEngine des cadeaux du village
 </pre>
+
+Les vrais bonhommes de neige des versions 1.x à 2.0 (`snowmen.yml`) sont remplacés à leur chargement : leur place passe
+dans `bonhommes.yml`, l'entité est retirée et son chunk n'est plus gardé chargé.
 
 ## Données
 

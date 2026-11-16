@@ -6,49 +6,51 @@
 # ---------------------------------------------------------------- textes 1.1
 
 prefix: "&7&l« &c&lSH &8&l» &7"
-cooldown_message: "<red>Doucement ! Il y aura des cadeaux pour tout le monde :)</red>"
+cooldown_message: "<red>Doucement, il y aura des cadeaux pour tout le monde !</red>"
 snowball_received: "<white><bold>« <red>SH</red> » </bold>Tu as reçu une <gradient:#ff0000:#ffffff><bold>boule de neige magique</bold></gradient> !</white>"
-usage: "Utilisation : &c/shchristmaspresents <%subcommands%>"
-# Commande joueur tapée hors de l'Avent, du village et des emplettes : même texte qu'une commande inconnue.
+usage: "Sous-commandes possibles &c/shchristmaspresents <%subcommands%>"
+# Commande joueur tapée hors de l'Avent, du monde de Noël et des emplettes : même texte qu'une commande inconnue.
 commande-fermee: "&7&l« &f&lSH &8&l» &fCommande inconnue, essayez autre chose"
 player-only: "Cette commande est &créservée aux joueurs&7."
 player-not-found: "Le joueur &c%player% &7n'est pas en ligne."
-give-usage: "Utilisation : &c/shchristmaspresents give <joueur> [nombre]"
+give-usage: "Tape &c/shchristmaspresents give <joueur> [nombre]"
 give-done: "&a%amount% &7boule(s) de neige magique(s) donnée(s) à &a%player%&7."
 region-set: "Position &a%corner% &7de la zone des cadeaux définie."
 clicker-created: "Bonhomme de neige clicker &acréé&7."
 clicker-removed: "Bonhomme de neige clicker &asupprimé&7."
 clicker-none-nearby: "Aucun bonhomme de neige clicker à moins de &c3 blocs&7."
-clickers-header: "Bonhommes de neige clicker (&e%count%&7) :"
+clickers-header: "&e%count% &7bonhomme(s) de neige clicker"
 clickers-line: "&8 - &7%world% %x%, %y%, %z%"
-reload-success: "Configuration &arechargée&7 : zone, modèles (&e%models%&7), textes, réglages de l'évènement."
-reload-error: "Rechargement &crefusé &7(%file% : %error%). La configuration précédente est conservée."
-info-usage: "Utilisation : &c/shchristmaspresents info <joueur>"
+reload-success: "Configuration &arechargée&7, avec &e%models% &7modèles de cadeaux, les textes et les réglages."
+reload-error: "Rechargement &crefusé&7, %file% est invalide (%error%). La configuration précédente est gardée."
+info-usage: "Tape &c/shchristmaspresents info <joueur>"
 info-unknown: "Aucune donnée de clicker pour &c%player%&7."
-info-line: "&e%player% &7: &e%clicks% &7clics, niveau &e%level%&7, prochain niveau à &e%required% &7clics."
+info-line: "&e%player% &7a &e%clicks% &7clics, niveau &e%level%&7, prochain niveau à &e%required% &7clics."
 
 erreur: "&7&l« &c&lSH &8&l» &7Un problème est survenu, rien n'a été retiré. Réessaie dans un instant."
 
-# ---------------------------------------------------------------- cadeaux du village et clicker (MiniMessage)
+# ---------------------------------------------------------------- cadeaux du monde de Noël et clicker (MiniMessage)
 
 boule:
   nom: "<gradient:#ff0000:#ffffff><bold>❄ Boule de neige magique ❄</bold></gradient>"
   lore:
     - "<dark_gray>ᴄᴏʟʟᴇᴄᴛɪᴏɴ ɴᴏᴇʟ 2026 ☃</dark_gray>"
     - ""
-    - "<gray>Lance-la sur un cadeau</gray>"
-    - "<gray>pour l'ouvrir.</gray>"
+    - "<gray>Lance-la sur un cadeau du</gray>"
+    - "<gray>monde de Noël pour l'ouvrir.</gray>"
 
 clicker:
-  barre: "<gradient:#ff0000:#ffffff>Niveau %level% | Clics %clicks%/%required%</gradient> | <gradient:#ffffff:#ff0000>Prochain gain %next_reward% ❄</gradient>"
+  barre: "<white>Niveau <yellow>%level%</yellow> <dark_gray>•</dark_gray> <aqua>%clicks%</aqua><gray>/%required% clics</gray> <dark_gray>•</dark_gray> <gray>prochain niveau</gray> <white>%next_reward% boules</white></white>"
   sous-titre: ""
-  niveau: "<bold><green>BRAVO !</green></bold> <gray>Tu passes niveau <yellow>%level%</yellow> !</gray>"
-  anti-afk: "<red><bold>ANTI-AFK</bold></red> <gray>Bouge pour continuer à cliquer</gray>"
+  niveau: "<bold><gray>«</gray> <green>SH</green> <dark_gray>»</dark_gray></bold> <gray>Bravo, tu passes <green>niveau %level%</green> et tu gagnes des <white>boules de neige magiques</white> !</gray>"
+  anti-afk: "<gray>Bouge un peu pour continuer à cliquer</gray>"
 
-# Titre court à l'ouverture d'un cadeau de cette rareté (rewards.<rareté> dans config.yml). Absent = pas de titre.
+# Monde de Noël. Titre court à l'ouverture d'un cadeau de cette rareté (village.raretes dans config.yml), absent = pas
+# de titre. a-la-main : clic sur un cadeau sans boule de neige magique en main (une fois toutes les 4 secondes).
 village:
-  # Téléport refusé vers le village fermé (village.fermeture dans config.yml).
-  ferme: "&7&l« &e&lSH &8&l» &7Ce monde est fermé pour le moment."
+  # Téléport refusé vers le monde de Noël fermé (village.fermeture dans config.yml).
+  ferme: "&7&l« &e&lSH &8&l» &7Le monde de Noël ouvre le &e1er décembre&7."
+  a-la-main: "&7&l« &e&lSH &8&l» &7Ce cadeau s'ouvre avec une &eboule de neige magique&7. Clique un &ebonhomme de neige &7pour en gagner, puis lance-la sur le cadeau."
   titres:
     dore: "&6&lCadeau doré !"
   sous-titres:
@@ -65,14 +67,14 @@ flocons:
     cadeau-recu: ""
   sources:
     porte: "Porte de l'Avent"
-    defi: "Défi du lutin"
-    village: "Cadeau du village"
+    defi: "Défi du Lutin"
+    village: "Cadeau"
     ile: "Petit cadeau"
     temps: "Temps de jeu"
     vote: "Vote"
     maison: "Maison en pain d'épice"
     parkour: "Parkour de Noël"
-    soiree: "Soirée de Noël"
+    soiree: "Mini-jeu de Noël"
     sapin-palier: "Palier du Grand Sapin"
     cadeau-recu: "Cadeau reçu"
     drop: "Cadeau du ciel"
@@ -123,7 +125,7 @@ calendrier:
     "14": "&f1 clé de Noël &7et &f1 décoration Noël 2026 &7offertes."
     "21": "&f2 clés de Noël &7offertes."
   menu:
-    titre: "&8Calendrier de l'Avent"
+    titre: "&8&lNoël &8| Calendrier de l'Avent"
     info:
       nom: "&c&lCalendrier de l'Avent"
       description:
@@ -163,13 +165,13 @@ calendrier:
 
 sapin:
   ferme: "&7&l« &e&lSH &8&l» &7Le Grand Sapin n'accepte pas d'offrande en ce moment."
-  usage: "&7&l« &e&lSH &8&l» &7Utilisation : &e/sapin offrir <nombre>"
+  usage: "&7&l« &e&lSH &8&l» &7Pour offrir des Flocons, tape &e/sapin offrir <nombre>&7."
   part-complete: "&7&l« &6&lSH &8&l» &7Ta part du jour est complète (&6{plafond} ❄&7), reviens demain."
   manque: "&7&l« &c&lSH &8&l» &7Il te manque &c{manque} ❄&7."
   offert: "&7&l« &a&lSH &8&l» &7Merci ! &b{montant} ❄ &7offerts au Grand Sapin, qui est à &a{pourcent} %&7."
   offert-partiel: "&7&l« &a&lSH &8&l» &7Merci ! &b{montant} ❄ &7offerts, ta part du jour est complète. Le Grand Sapin est à &a{pourcent} %&7."
   menu:
-    titre: "&8Grand Sapin"
+    titre: "&8&lNoël &8| Grand Sapin"
     barre-pleine: "&a|"
     barre-vide: "&8|"
     jauge:
@@ -214,7 +216,7 @@ carte:
   tampon-obtenu: "&7&l« &a&lSH &8&l» &7Nouveau tampon sur ta carte de Noël, &a{tampon} &7(&a{n}&7/{total}) !"
   complete: "&7&l« &a&lSH &8&l» &7Ta carte de Noël est &acomplète &7! Le &aRenne &7t'attend dans tes compagnons."
   menu:
-    titre: "&8Carte de Noël"
+    titre: "&8&lNoël &8| Carte de Noël"
     info:
       nom: "&c&lCarte de Noël"
       description:
@@ -230,15 +232,15 @@ carte:
     tampon-manquant: "&7{tampon}"
   tampons:
     village-1:
-      nom: "Arrivée au village"
+      nom: "Premier pas"
       description:
         - "&7Offert à ta première visite"
-        - "&7du village de Noël."
+        - "&7du monde de Noël."
     village-2:
-      nom: "Bienvenue au village"
+      nom: "Bienvenue chez le Lutin"
       description:
         - "&7Offert à ta première visite"
-        - "&7du village de Noël."
+        - "&7du monde de Noël."
     portes:
       nom: "7 portes"
       description:
@@ -247,30 +249,32 @@ carte:
     maisons:
       nom: "Maisons en pain d'épice"
       description:
-        - "&7Trouve les 10 maisons en pain"
-        - "&7d'épice du village."
+        - "&7Trouve 10 maisons en pain"
+        - "&7d'épice du monde de Noël."
     parkour:
       nom: "Parkour de Noël"
       description:
-        - "&7Termine le parkour du village."
+        - "&7Termine le parkour du"
+        - "&7monde de Noël."
     clicker:
       nom: "Bonhomme de neige"
       description:
         - "&7Atteins le niveau 15 au"
         - "&7bonhomme de neige clicker."
     soirees:
-      nom: "Soirées de Noël"
+      nom: "Mini-jeux de Noël"
       description:
-        - "&7Joue 3 soirées de Noël."
+        - "&7Joue 3 mini-jeux de Noël"
+        - "&7(/event)."
     cadeau:
       nom: "Cadeau offert"
       description:
         - "&7Offre un cadeau à un joueur"
         - "&7(/cadeau)."
     defis:
-      nom: "Défis du lutin"
+      nom: "Défis du Lutin"
       description:
-        - "&7Réussis 20 défis du lutin."
+        - "&7Réussis 20 défis du Lutin."
     sapin:
       nom: "Grand Sapin"
       description:
@@ -289,6 +293,7 @@ boutique:
   manque: "&7&l« &c&lSH &8&l» &7Il te manque &c{manque} ❄ &7pour &c{article}&7."
   achete: "&7&l« &a&lSH &8&l» &7Tu as acheté &a{article} &7pour &b{prix} ❄&7."
   indisponible: "&7&l« &e&lSH &8&l» &e{article} &7arrive bientôt."
+  bientot: "&7&l« &e&lSH &8&l» &e{article} &7arrive le &e{date}&7."
   # Limites d'un article (placeholder article_<id>_limite).
   limite:
     jour-total: "{jour} par jour, {achats}/{total} achetées"
@@ -298,25 +303,25 @@ boutique:
   # Nom de chaque article dans les messages.
   articles:
     boules: "10 boules de neige magiques"
-    deco1: "Décoration Noël 2026 n°1"
-    deco2: "Décoration Noël 2026 n°2"
-    deco3: "Décoration Noël 2026 n°3"
-    deco4: "Décoration Noël 2026 n°4"
-    deco5: "Décoration Noël 2026 n°5"
-    deco6: "Décoration Noël 2026 n°6"
+    deco1: "Sapin illuminé"
+    deco2: "Couronne de l'Avent"
+    deco3: "Boule à neige"
+    deco4: "Casse-noisette"
+    deco5: "Traîneau de cadeaux"
+    deco6: "Sucre d'orge géant"
     titre-givre: "Titre Givre"
     particule-aurore: "Particule Aurore"
     cle: "Clé de Noël"
-    luckyblock: "LuckyBlock"
+    luckyblock: "LuckyBlock Jaune"
     fly: "Fly 4 h"
     pain-epices: "Compagnon Pain d'épices"
-    deco-rare: "Décoration rare 2026"
+    deco-rare: "Carrousel de Noël"
     titre-givre-anime: "Titre Givre animé"
 
 # ---------------------------------------------------------------- cadeaux entre joueurs (/cadeau)
 
 cadeau:
-  usage: "&7&l« &e&lSH &8&l» &7Utilisation : &e/cadeau <joueur> <montant>"
+  usage: "&7&l« &e&lSH &8&l» &7Pour offrir des Flocons, tape &e/cadeau <joueur> <montant>&7."
   ferme: "&7&l« &e&lSH &8&l» &7Les cadeaux ne s'envoient pas en ce moment."
   montant: "&7&l« &6&lSH &8&l» &7Un cadeau va de &6{min} &7à &6{max} ❄&7."
   inconnu: "&7&l« &c&lSH &8&l» &7Joueur inconnu, &c{joueur}&7."
@@ -391,62 +396,63 @@ placeholders:
   # %shchristmaspresents_phase_ligne% ({avent}, {village}, {veillee}, {fin-gains}, {emplettes}, {cloture}, {apres})
   phase-ligne:
     avant: "&7L'Avent commence le {avent}"
-    avent: "&7Une porte par jour, le village ouvre le {village}"
-    village: "&7Le village est ouvert, Flocons jusqu'au {fin-gains}"
+    avent: "&7Une porte par jour, le monde de Noël ouvre le {village}"
+    village: "&7Le monde de Noël est ouvert jusqu'au {cloture}"
     emplettes: "&7Dernières emplettes jusqu'au {cloture}"
     cloture: "&7Noël est fini, merci d'avoir participé !"
     apres: "&7Noël est fini, merci d'avoir participé !"
   # %shchristmaspresents_article_<id>_ligne%
   article-ligne:
-    ok: "&a» Clic pour acheter"
+    ok: "&7&o(( &a&oCliquez pour acheter &7&o))"
     manque: "&cIl te manque {manque} ❄"
     deja: "&7Déjà obtenu"
     limite-totale: "&7Limite atteinte"
     limite-jour: "&7Limite du jour atteinte, reviens demain"
     requiert: "&7Disponible après « {article} »"
     indisponible: "&7Bientôt disponible"
+    bientot: "&7En vente le {date}"
     fermee: "&7Boutique fermée"
 
 # ---------------------------------------------------------------- administration
 
 admin:
-  joueur-inconnu: "&7&l« &c&lSH &8&l» &7Joueur inconnu : &c{joueur}"
+  joueur-inconnu: "&7&l« &c&lSH &8&l» &7Aucun joueur ne s'appelle &c{joueur}&7."
   joueur-hors-ligne: "&7&l« &c&lSH &8&l» &c{joueur} &7n'est pas en ligne."
   hors-gains: "&7&l« &e&lSH &8&l» &7Hors de la période de gains, rien n'est compté."
   redemarrage-requis: "&7&l« &6&lSH &8&l» &7annee et base-de-donnees changent au prochain démarrage."
-  info-flocons: "&e{joueur} &7: &b{total} ❄ &7gagnés, &b+{jour} &7aujourd'hui, multiplicateur &e{facteur}"
+  info-flocons: "&e{joueur} &7a gagné &b{total} ❄&7, dont &b+{jour} &7aujourd'hui, multiplicateur &e{facteur}"
   info-evenement: "&7Portes &e{portes}&7, tampons &e{tampons}/{tampons-total}&7, sapin &e{sapin}&7, cadeaux offerts &e{cadeaux}&7, livraisons en attente &e{livraisons}"
-  flocons-usage: "&7&l« &e&lSH &8&l» &7Utilisation : &e/shchristmaspresents flocons <joueur> <montant> <source>"
-  source-inconnue: "&7&l« &c&lSH &8&l» &7Source inconnue : &c{source}"
-  flocons-fait: "&7&l« &a&lSH &8&l» &a{joueur} &7: &b{verse} ❄ &7versés (&f{montant} &7de base, {source})."
-  multiplicateur-usage: "&7&l« &e&lSH &8&l» &7Utilisation : &e/shchristmaspresents multiplicateur <facteur> <minutes>"
+  flocons-usage: "&7&l« &e&lSH &8&l» &7Tape &e/shchristmaspresents flocons <joueur> <montant> <source>"
+  source-inconnue: "&7&l« &c&lSH &8&l» &7La source &c{source} &7n'existe pas."
+  flocons-fait: "&7&l« &a&lSH &8&l» &a{joueur} &7reçoit &b{verse} ❄ &7(&f{montant} &7de base, {source})."
+  multiplicateur-usage: "&7&l« &e&lSH &8&l» &7Tape &e/shchristmaspresents multiplicateur <facteur> <minutes>"
   multiplicateur-fait: "&7&l« &a&lSH &8&l» &7Flocons &a×{facteur} &7pendant &a{minutes} min&7."
   multiplicateur-arrete: "&7&l« &a&lSH &8&l» &7Multiplicateur global arrêté."
-  compteur-usage: "&7&l« &e&lSH &8&l» &7Utilisation : &e/shchristmaspresents compteur <joueur> <id> [n]"
-  compteur-fait: "&7&l« &a&lSH &8&l» &7Compteur &a{compteur} &7de &a{joueur} &7: &f{valeur}"
-  tampon-usage: "&7&l« &e&lSH &8&l» &7Utilisation : &e/shchristmaspresents tampon <joueur> <id>"
-  tampon-inconnu: "&7&l« &c&lSH &8&l» &7Tampon inconnu : &c{tampon}"
+  compteur-usage: "&7&l« &e&lSH &8&l» &7Tape &e/shchristmaspresents compteur <joueur> <id> [n]"
+  compteur-fait: "&7&l« &a&lSH &8&l» &7Le compteur &a{compteur} &7de &a{joueur} &7est à &f{valeur}&7."
+  tampon-usage: "&7&l« &e&lSH &8&l» &7Tape &e/shchristmaspresents tampon <joueur> <id>"
+  tampon-inconnu: "&7&l« &c&lSH &8&l» &7Le tampon &c{tampon} &7n'existe pas."
   tampon-fait: "&7&l« &a&lSH &8&l» &7Tampon &a{tampon} &7accordé à &a{joueur}&7."
   tampon-deja: "&7&l« &e&lSH &8&l» &e{joueur} &7a déjà le tampon &e{tampon}&7."
-  acheter-usage: "&7&l« &e&lSH &8&l» &7Utilisation : &e/shchristmaspresents acheter <joueur> <article>"
-  article-inconnu: "&7&l« &c&lSH &8&l» &7Article inconnu : &c{article}"
-  sapin-usage: "&7&l« &e&lSH &8&l» &7Utilisation : &e/shchristmaspresents sapin <info|cible <points>|ajouter <joueur> <points>|veillee>"
+  acheter-usage: "&7&l« &e&lSH &8&l» &7Tape &e/shchristmaspresents acheter <joueur> <article>"
+  article-inconnu: "&7&l« &c&lSH &8&l» &7L'article &c{article} &7n'existe pas."
+  sapin-usage: "&7&l« &e&lSH &8&l» &7Tape &e/shchristmaspresents sapin <info|cible <points>|ajouter <joueur> <points>|veillee>"
   sapin-info: "&7&l« &e&lSH &8&l» &7Grand Sapin à &a{pourcent} % &7(&f{points} &7points, cible &f{cible} &7{origine}, départ &f{depart} %&7), &f{contributeurs} &7contributeurs, paliers atteints &f{paliers}&7."
   sapin-cible-config: "de config.yml"
   sapin-cible-commande: "réglée par commande"
   sapin-ajoute: "&7&l« &a&lSH &8&l» &f{points} &7points ajoutés à &a{joueur}&7, sapin à &a{pourcent} %&7."
-  sapin-palier: "&7&l« &a&lSH &8&l» &7Palier &a{palier} % &7lancé : &f{en-ligne} &7contributeur(s) en ligne, &f{plus-tard} &7à leur connexion."
+  sapin-palier: "&7&l« &a&lSH &8&l» &7Palier &a{palier} % &7lancé pour &f{en-ligne} &7contributeur(s) en ligne et &f{plus-tard} &7à leur connexion."
   sapin-veillee-absent: "&7&l« &c&lSH &8&l» &7Aucun palier marqué veillee dans la config."
   sapin-veillee-fait: "&7&l« &e&lSH &8&l» &7Le palier de la Veillée est déjà parti."
   sapin-veillee-refus: "&7&l« &6&lSH &8&l» &7Jauge à &6{pourcent} %&7, il faut &6{seuil} % &7pour la Veillée."
-  drop-usage: "&7&l« &e&lSH &8&l» &7Utilisation : &e/shchristmaspresents drop <zone> <secondes> <nombre>"
-  drop-zone-inconnue: "&7&l« &c&lSH &8&l» &7Zone inconnue : &c{zone} &7(zones : {zones})"
-  drop-monde-absent: "&7&l« &c&lSH &8&l» &7Monde non chargé : &c{monde}"
+  drop-usage: "&7&l« &e&lSH &8&l» &7Tape &e/shchristmaspresents drop <zone> <secondes> <nombre>"
+  drop-zone-inconnue: "&7&l« &c&lSH &8&l» &7La zone &c{zone} &7n'existe pas, zones possibles {zones}."
+  drop-monde-absent: "&7&l« &c&lSH &8&l» &7Le monde &c{monde} &7n'est pas chargé."
   drop-lance: "&7&l« &a&lSH &8&l» &f{nombre} &7cadeaux du ciel sur &a{zone} &7pendant &f{secondes} s&7."
   horloge-interdite: "&7&l« &c&lSH &8&l» &7Horloge de test désactivée (test.horloge-autorisee)."
-  horloge-usage: "&7&l« &e&lSH &8&l» &7Utilisation : &e/shchristmaspresents horloge <AAAA-MM-JJTHH:MM|reel>"
+  horloge-usage: "&7&l« &e&lSH &8&l» &7Tape &e/shchristmaspresents horloge <AAAA-MM-JJTHH:MM|reel>"
   horloge-etat: "&7&l« &e&lSH &8&l» &7Heure de l'évènement &e{heure} &7({test}), phase &e{phase}&7."
   bilan-calcul: "&7&l« &e&lSH &8&l» &7Bilan en cours…"
   bilan-fait: "&7&l« &a&lSH &8&l» &7Bilan écrit dans &a{fichier} &7(et en console)."
-  tous-usage: "&7&l« &e&lSH &8&l» &7Utilisation : &e/shchristmaspresents tous [monde] <commande avec {joueur}>"
+  tous-usage: "&7&l« &e&lSH &8&l» &7Tape &e/shchristmaspresents tous [monde] <commande avec {joueur}>"
   tous-fait: "&7&l« &a&lSH &8&l» &7Commande lancée pour &a{n} &7joueur(s)."

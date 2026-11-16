@@ -1,10 +1,10 @@
 package org.Cry_Legende.sHChristmasPresents.village;
 
-import com.destroystokyo.paper.profile.PlayerProfile;
-import com.destroystokyo.paper.profile.ProfileProperty;
+import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.title.Title;
 import org.Cry_Legende.sHChristmasPresents.SHChristmasPresents;
+import org.Cry_Legende.sHChristmasPresents.rendu.Scene;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
@@ -14,32 +14,31 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
+import org.bukkit.Tag;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.Bisected;
+import org.bukkit.block.data.type.Slab;
+import org.bukkit.block.data.type.Snow;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.BlockDisplay;
-import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Firework;
-import org.bukkit.entity.Interaction;
-import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Snowball;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
-import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.world.EntitiesLoadEvent;
 import org.bukkit.event.world.WorldLoadEvent;
-import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
-import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitTask;
-import org.joml.Matrix4f;
+import org.bukkit.util.BoundingBox;
+import org.bukkit.util.Vector;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -51,41 +50,37 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Cadeaux du village : ils apparaissent dans village.zone et s'ouvrent avec une boule de neige magique. Chaque rareté
- * (village.raretes) a sa chance, ses modèles et ses commandes ; feu-artifice ajoute un feu d'artifice, et messages.yml
- * village.titres.&lt;rareté&gt; un titre court. Les touches arrivent sur le fil du monde : elles sont jouées sur le fil
- * principal, où un cadeau ne s'ouvre qu'une fois.
+ * Cadeaux du village : ils apparaissent dans village.zone (montrés par paquets, aucune entité côté serveur) et
+ * s'ouvrent avec une boule de neige magique, lancée ou tenue en main au clic. Chaque rareté (village.raretes) a sa
+ * chance, ses modèles, son échelle, la vitesse de son couvercle et ses commandes ; feu-artifice ajoute un feu
+ * d'artifice, messages.yml village.titres.&lt;rareté&gt; un titre court.
+ * <p>
+ * Une boule lancée est suivie à chaque tick : le trajet qu'elle va faire pendant le tick (position + vitesse) est
+ * testé contre la boîte de chaque cadeau, si bien qu'un cadeau traversé s'ouvre même si la boule ne s'y arrête pas.
+ * Une boule qui tombe à côté d'un cadeau (1,2 bloc) l'ouvre aussi ; une boule perdue est rendue.
  */
 public final class CadeauxVillage implements Listener {
 
-    private record Instance(Interaction interaction, List<Display> parties) {
-        void retirer() {
-            for (Display d : parties) {
-                d.remove();
-            }
-            if (interaction != null) {
-                interaction.remove();
-            }
-        }
-    }
-
     private final SHChristmasPresents plugin;
     private final BouleDeNeige boules;
+    private final Scene scene;
     private final NamespacedKey cleCadeau;
-    private final NamespacedKey cleRarete;
     private final NamespacedKey cleFeu;
-    private final Map<UUID, Instance> actifs = new ConcurrentHashMap<>();
+    private final List<Cadeau> actifs = new ArrayList<>();
+    private final Map<UUID, Snowball> lancees = new ConcurrentHashMap<>();
     private final Map<UUID, Long> attentes = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> explications = new ConcurrentHashMap<>();
     private volatile Map<String, Modeles.Modele> modeles = Map.of();
     private volatile Location min;
     private volatile Location max;
     private BukkitTask tache;
+    private BukkitTask suivi;
 
-    public CadeauxVillage(SHChristmasPresents plugin, BouleDeNeige boules) {
+    public CadeauxVillage(SHChristmasPresents plugin, BouleDeNeige boules, Scene scene) {
         this.plugin = plugin;
         this.boules = boules;
+        this.scene = scene;
         this.cleCadeau = new NamespacedKey(plugin, "xmas_gift");
-        this.cleRarete = new NamespacedKey(plugin, "xmas_rarity");
         this.cleFeu = new NamespacedKey(plugin, "xmas_firework");
     }
 
@@ -100,6 +95,9 @@ public final class CadeauxVillage implements Listener {
         }
         long periode = Math.max(1L, plugin.getConfig().getLong("village.apparition-ticks", 20L));
         tache = Bukkit.getScheduler().runTaskTimer(plugin, this::tic, 100L, periode);
+        if (suivi == null) {
+            suivi = Bukkit.getScheduler().runTaskTimer(plugin, this::suivre, 1L, 1L);
+        }
     }
 
     public int nombreModeles() {
@@ -110,6 +108,10 @@ public final class CadeauxVillage implements Listener {
         if (tache != null) {
             tache.cancel();
             tache = null;
+        }
+        if (suivi != null) {
+            suivi.cancel();
+            suivi = null;
         }
         nettoyer();
     }
@@ -142,18 +144,10 @@ public final class CadeauxVillage implements Listener {
     }
 
     private void nettoyer() {
-        for (Instance instance : actifs.values()) {
-            instance.retirer();
+        for (Cadeau c : actifs) {
+            scene.retirer(c);
         }
         actifs.clear();
-        Location bas = min;
-        if (bas != null && bas.getWorld() != null) {
-            for (Entity entite : bas.getWorld().getEntities()) {
-                if (entite.getPersistentDataContainer().has(cleCadeau, PersistentDataType.BYTE)) {
-                    entite.remove();
-                }
-            }
-        }
     }
 
     // ---- apparition (fil principal)
@@ -161,17 +155,19 @@ public final class CadeauxVillage implements Listener {
     private void tic() {
         long maintenant = System.currentTimeMillis();
         attentes.values().removeIf(fin -> fin < maintenant);
-        if (min == null || max == null) {
-            return;
-        }
-        actifs.entrySet().removeIf(entree -> {
-            Entity entite = Bukkit.getEntity(entree.getKey());
-            if (entite == null || !entite.isValid()) {
-                entree.getValue().retirer();
+        explications.values().removeIf(fin -> fin < maintenant);
+        // Cadeaux ouverts : retirés une fois l'animation jouée, même si plus personne ne les regarde
+        long t = scene.tick();
+        actifs.removeIf(c -> {
+            if (c.ouvertDepuis(t) > 12) {
+                scene.retirer(c);
                 return true;
             }
             return false;
         });
+        if (min == null || max == null) {
+            return;
+        }
         if (actifs.size() >= plugin.getConfig().getInt("village.max-cadeaux", 30)) {
             return;
         }
@@ -219,100 +215,208 @@ public final class CadeauxVillage implements Listener {
             plugin.debug("Modèle introuvable pour " + rarete);
             return;
         }
-        poser(modele, rarete);
+        float echelle = (float) raretes.getDouble(rarete + ".echelle", 1.0);
+        double vitesse = raretes.getDouble(rarete + ".vitesse-couvercle", 1.0);
+        poser(modele, rarete, echelle, vitesse);
     }
 
-    private void poser(Modeles.Modele modele, String rarete) {
+    private void poser(Modeles.Modele modele, String rarete, float echelle, double vitesse) {
         World monde = min.getWorld();
         if (monde == null) {
             return;
         }
-        double x = ThreadLocalRandom.current().nextDouble(min.getX(), Math.max(min.getX() + 0.01, max.getX()));
-        double z = ThreadLocalRandom.current().nextDouble(min.getZ(), Math.max(min.getZ() + 0.01, max.getZ()));
-        // Pas de chargement de chunk : un cadeau hors des chunks chargés n'est vu par personne
-        if (!monde.isChunkLoaded((int) Math.floor(x) >> 4, (int) Math.floor(z) >> 4)) {
+        ThreadLocalRandom r = ThreadLocalRandom.current();
+        double demi = modele.largeur * echelle / 2.0;
+        double[] place = trouverPlace(monde, r, demi, modele.hauteur * echelle);
+        if (place == null) {
             return;
         }
-        Block sol = monde.getHighestBlockAt((int) Math.floor(x), (int) Math.floor(z));
-        Location position = sol.getLocation().add(0.5, 1.0 + plugin.getConfig().getDouble("village.decalage-vertical", 0.0), 0.5);
-        if (position.getY() < min.getY() || position.getY() > max.getY()) {
-            return;
+        float lacet = r.nextFloat() * 360f;
+        Cadeau cadeau = new Cadeau(monde, place[0], place[1], place[2], lacet, echelle, vitesse, modele, rarete, this::clicMain);
+        actifs.add(cadeau);
+        scene.ajouter(cadeau);
+        Location ici = new Location(monde, place[0], place[1], place[2]);
+        monde.playSound(ici, Sound.ENTITY_CHICKEN_EGG, 0.6f, 0.5f);
+        monde.spawnParticle(Particle.CLOUD, ici.clone().add(0, 0.4, 0), 5, 0.2, 0.2, 0.2, 0.03);
+        plugin.debug("Cadeau " + rarete + " (" + modele.nom + ") en " + ici.toVector());
+    }
+
+    /**
+     * Une place libre dans la zone : le dessus réel du bloc (dalle du bas, couche de neige, tapis), jamais un escalier,
+     * une barrière, une clôture, un mur, des feuilles, de l'eau ou un bloc de décoration ; assez de place au-dessus ;
+     * aucune entité (décoration, PNJ) ni autre cadeau tout près. Le cadeau n'est pas toujours au centre du bloc : il
+     * glisse au hasard tant qu'il reste posé sur une surface de même hauteur. Rend x, y, z ou null.
+     */
+    private double[] trouverPlace(World monde, ThreadLocalRandom r, double demi, double hauteur) {
+        double x = r.nextDouble(min.getX(), Math.max(min.getX() + 0.01, max.getX()));
+        double z = r.nextDouble(min.getZ(), Math.max(min.getZ() + 0.01, max.getZ()));
+        int bx = (int) Math.floor(x), bz = (int) Math.floor(z);
+        // Pas de chargement de chunk : un cadeau hors des chunks chargés ne serait vu par personne
+        if (!monde.isChunkLoaded(bx >> 4, bz >> 4)) {
+            return null;
         }
-        for (Instance actif : actifs.values()) {
-            if (actif.interaction().isValid() && actif.interaction().getLocation().distanceSquared(position) < 2.25) {
-                return;
+        int haut = (int) Math.floor(max.getY()) + 1, bas = (int) Math.floor(min.getY()) - 1;
+        Double dessus = null;
+        for (int by = haut; by >= bas; by--) {
+            Block b = monde.getBlockAt(bx, by, bz);
+            if (b.getType().isAir()) {
+                continue;
+            }
+            Double s = surface(b);
+            if (s == null && b.isPassable() && !b.isLiquid()) {
+                continue; // herbe, fleurs, torches… : on regarde en dessous
+            }
+            dessus = s;
+            break;
+        }
+        if (dessus == null || dessus < min.getY() || dessus > max.getY() + 1) {
+            return null;
+        }
+        double sol = dessus;
+        // Place au-dessus : de l'air sur toute la hauteur du cadeau (sauf la couche de neige ou le tapis porteurs)
+        for (int by = (int) Math.floor(sol - 0.001); by <= (int) Math.floor(sol + hauteur + 0.2); by++) {
+            Block b = monde.getBlockAt(bx, by, bz);
+            if (b.getY() + 1 <= sol + 0.001 || b.getType().isAir()) {
+                continue;
+            }
+            Double s = surface(b);
+            if (s == null || Math.abs(s - sol) > 0.001) {
+                return null;
             }
         }
-        float lacet = ThreadLocalRandom.current().nextFloat() * 360f;
-        position.setYaw(lacet);
-        Matrix4f rotation = new Matrix4f().rotateY((float) Math.toRadians(-lacet));
-        Interaction interaction = monde.spawn(position.clone(), Interaction.class, e -> {
-            e.setInteractionWidth(modele.largeur);
-            e.setInteractionHeight(modele.hauteur);
-            e.setResponsive(true);
-            // Jamais sauvé avec le chunk : un cadeau déchargé ou présent à l'arrêt ne revient pas orphelin
-            e.setPersistent(false);
-            e.getPersistentDataContainer().set(cleCadeau, PersistentDataType.BYTE, (byte) 1);
-            e.getPersistentDataContainer().set(cleRarete, PersistentDataType.STRING, rarete);
-        });
-        monde.playSound(position, Sound.ENTITY_CHICKEN_EGG, 1.0f, 0.5f);
-        monde.spawnParticle(Particle.CLOUD, position.clone().add(0, 0.5, 0), 5, 0.2, 0.2, 0.2, 0.05);
-        List<Display> parties = new ArrayList<>();
-        for (Modeles.Partie partie : modele.parties) {
-            Matrix4f ajustee = new Matrix4f(partie.matrice).translateLocal(modele.recentrage);
-            Matrix4f finale = new Matrix4f(rotation).mul(ajustee);
-            Class<? extends Display> classe = partie.type == Modeles.Type.BLOCK ? BlockDisplay.class : ItemDisplay.class;
-            Display affichage = monde.spawn(position, classe, e -> {
-                e.setRotation(lacet, 0);
-                e.setPersistent(false);
-                e.getPersistentDataContainer().set(cleCadeau, PersistentDataType.BYTE, (byte) 1);
-                if (e instanceof ItemDisplay item) {
-                    item.setItemStack(objetPartie(partie));
-                } else if (e instanceof BlockDisplay bloc) {
-                    bloc.setBlock(partie.bloc != null ? partie.bloc : Bukkit.createBlockData(Material.STONE));
+        // Décalage au hasard dans le bloc, gardé seulement si le cadeau repose entièrement sur la même hauteur
+        double cx = bx + 0.5, cz = bz + 0.5;
+        double jeu = Math.max(0.0, 0.42 - demi * 0.5);
+        double ox = cx + (r.nextDouble() * 2 - 1) * jeu, oz = cz + (r.nextDouble() * 2 - 1) * jeu;
+        double appui = Math.max(0.05, demi * 0.6);
+        if (memeHauteur(monde, ox, oz, appui, sol)) {
+            cx = ox;
+            cz = oz;
+        } else if (!memeHauteur(monde, cx, cz, appui, sol)) {
+            return null;
+        }
+        // Entités sur le bloc (décorations, PNJ, cadres…) et autres cadeaux
+        BoundingBox zone = new BoundingBox(cx - demi - 0.3, sol - 0.3, cz - demi - 0.3, cx + demi + 0.3, sol + hauteur + 0.3, cz + demi + 0.3);
+        for (Entity e : monde.getNearbyEntities(zone)) {
+            if (!(e instanceof Player)) {
+                return null;
+            }
+        }
+        for (Cadeau c : actifs) {
+            if (c.monde().equals(monde) && c.distanceCarre(cx, sol, cz) < 2.25) {
+                return null;
+            }
+        }
+        // Les bonhommes de neige n'ont pas d'entité côté serveur : on garde leur place libre
+        for (Location b : plugin.clicker().positions()) {
+            if (monde.equals(b.getWorld())) {
+                double dx = b.getX() - cx, dz = b.getZ() - cz;
+                if (dx * dx + dz * dz < 1.6 * 1.6 && Math.abs(b.getY() - sol) < 3) {
+                    return null;
                 }
-                e.setTransformationMatrix(finale);
-            });
-            parties.add(affichage);
+            }
         }
-        actifs.put(interaction.getUniqueId(), new Instance(interaction, parties));
-        plugin.debug("Cadeau " + rarete + " (" + modele.nom + ") en " + position.toVector());
+        return new double[]{cx, sol, cz};
     }
 
-    private static ItemStack objetPartie(Modeles.Partie partie) {
-        if (partie.texture == null) {
-            return new ItemStack(partie.materiau != null ? partie.materiau : Material.STONE);
+    /** Hauteur exacte du dessus d'un bloc sur lequel un cadeau peut reposer, ou null si on n'y pose rien. */
+    private static Double surface(Block b) {
+        Material m = b.getType();
+        if (b.isLiquid() || m == Material.BARRIER || m == Material.LIGHT || m == Material.STRUCTURE_VOID
+                || Tag.STAIRS.isTagged(m) || Tag.FENCES.isTagged(m) || Tag.FENCE_GATES.isTagged(m) || Tag.WALLS.isTagged(m)
+                || Tag.LEAVES.isTagged(m) || Tag.TRAPDOORS.isTagged(m) || Tag.BEDS.isTagged(m) || Tag.ALL_SIGNS.isTagged(m)
+                || m == Material.IRON_BARS || m.name().endsWith("GLASS_PANE") || m == Material.IRON_CHAIN
+                || m == Material.LANTERN || m == Material.SOUL_LANTERN || m == Material.PLAYER_HEAD
+                || m == Material.PLAYER_WALL_HEAD || m == Material.CHEST || m == Material.TRAPPED_CHEST || m == Material.ENDER_CHEST) {
+            return null;
         }
-        ItemStack tete = new ItemStack(Material.PLAYER_HEAD);
-        SkullMeta meta = (SkullMeta) tete.getItemMeta();
-        PlayerProfile profil = Bukkit.createProfile(UUID.randomUUID(), "GP");
-        profil.setProperty(new ProfileProperty("textures", partie.texture));
-        meta.setPlayerProfile(profil);
-        tete.setItemMeta(meta);
-        return tete;
+        if (b.getBlockData() instanceof Snow neige) {
+            return b.getY() + neige.getLayers() / 8.0;
+        }
+        if (Tag.WOOL_CARPETS.isTagged(m) || m == Material.MOSS_CARPET || m == Material.PALE_MOSS_CARPET) {
+            return b.getY() + 1 / 16.0;
+        }
+        if (b.getBlockData() instanceof Slab dalle) {
+            return dalle.getType() == Slab.Type.BOTTOM ? b.getY() + 0.5 : b.getY() + 1.0;
+        }
+        if (b.getBlockData() instanceof Bisected) {
+            return null; // portes, grandes plantes
+        }
+        if (b.isPassable()) {
+            return null;
+        }
+        BoundingBox boite = b.getBoundingBox();
+        // Un bloc plein ou presque : son dessus ; sinon (pots, enclumes, bougies…) on n'y pose rien
+        if (boite.getWidthX() < 0.99 || boite.getWidthZ() < 0.99) {
+            return null;
+        }
+        return boite.getMaxY();
     }
 
-    // ---- touches (fil du monde → fil principal)
-
-    private boolean estCadeau(Entity entite) {
-        return entite instanceof Interaction && entite.getPersistentDataContainer().has(cleCadeau, PersistentDataType.BYTE);
+    /** Vrai si les quatre coins de l'appui (x ± a, z ± a) reposent sur un dessus à la hauteur sol. */
+    private static boolean memeHauteur(World monde, double x, double z, double a, double sol) {
+        int y = (int) Math.floor(sol - 0.001);
+        for (double[] c : new double[][]{{x - a, z - a}, {x + a, z - a}, {x - a, z + a}, {x + a, z + a}}) {
+            int bx = (int) Math.floor(c[0]), bz = (int) Math.floor(c[1]);
+            Double s = null;
+            for (int by = y + 1; by >= y - 1 && s == null; by--) {
+                Block b = monde.getBlockAt(bx, by, bz);
+                if (b.getType().isAir()) {
+                    continue;
+                }
+                s = surface(b);
+                if (s == null) {
+                    return false;
+                }
+            }
+            if (s == null || Math.abs(s - sol) > 0.06) {
+                return false;
+            }
+        }
+        return true;
     }
 
-    @EventHandler
-    public void onDegats(EntityDamageByEntityEvent event) {
-        if (event.getDamager() instanceof Firework feu && feu.getPersistentDataContainer().has(cleFeu, PersistentDataType.BYTE)) {
-            event.setCancelled(true);
+    // ---- boules lancées (fil du monde → suivi au fil principal)
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onLancer(PlayerLaunchProjectileEvent event) {
+        if (event.getProjectile() instanceof Snowball boule && boule.getPersistentDataContainer().has(boules.cle(), PersistentDataType.BYTE)) {
+            lancees.put(boule.getUniqueId(), boule);
+        }
+    }
+
+    /** Chaque tick : le trajet du tick à venir de chaque boule est testé contre les cadeaux. */
+    private void suivre() {
+        if (lancees.isEmpty()) {
             return;
         }
-        if (!estCadeau(event.getEntity())) {
-            return;
-        }
-        event.setCancelled(true);
-        if (event.getDamager() instanceof Snowball boule && boule.getShooter() instanceof Player joueur
-                && boule.getPersistentDataContainer().has(boules.cle(), PersistentDataType.BYTE)) {
-            Interaction interaction = (Interaction) event.getEntity();
-            boule.remove();
-            plugin.sync(() -> toucher(joueur, interaction));
+        for (Map.Entry<UUID, Snowball> e : List.copyOf(lancees.entrySet())) {
+            Snowball boule = e.getValue();
+            if (!boule.isValid()) {
+                // Arrêtée par un bloc ou une entité : onImpact s'en charge (ou elle a disparu)
+                Bukkit.getScheduler().runTaskLater(plugin, () -> lancees.remove(e.getKey()), 2L);
+                continue;
+            }
+            Location p = boule.getLocation();
+            Vector v = boule.getVelocity();
+            Cadeau cible = null;
+            double meilleur = Double.MAX_VALUE;
+            for (Cadeau c : actifs) {
+                if (c.ouvert() || !c.monde().equals(p.getWorld())) {
+                    continue;
+                }
+                double t = c.touche(p.getX(), p.getY(), p.getZ(), v.getX(), v.getY(), v.getZ(), 0.2);
+                if (t >= 0 && t < meilleur) {
+                    meilleur = t;
+                    cible = c;
+                }
+            }
+            if (cible != null && lancees.remove(e.getKey()) != null) {
+                boule.remove();
+                if (boule.getShooter() instanceof Player joueur) {
+                    toucher(joueur, cible);
+                }
+            }
         }
     }
 
@@ -324,27 +428,25 @@ public final class CadeauxVillage implements Listener {
         if (!(boule.getShooter() instanceof Player joueur)) {
             return;
         }
-        if (estCadeau(event.getHitEntity())) {
-            Interaction interaction = (Interaction) event.getHitEntity();
-            plugin.sync(() -> toucher(joueur, interaction));
-            return;
-        }
-        Location impact = event.getHitBlock() != null ? event.getHitBlock().getLocation().add(0.5, 0.5, 0.5) : boule.getLocation();
-        Interaction proche = null;
-        double meilleure = Double.MAX_VALUE;
-        for (Entity e : impact.getWorld().getNearbyEntities(impact, 1.5, 1.5, 1.5)) {
-            if (estCadeau(e)) {
-                double d = e.getLocation().distanceSquared(impact);
-                if (d < meilleure) {
-                    meilleure = d;
-                    proche = (Interaction) e;
+        UUID id = boule.getUniqueId();
+        Location impact = boule.getLocation();
+        plugin.sync(() -> {
+            if (lancees.remove(id) == null) {
+                return; // déjà comptée par le suivi
+            }
+            Cadeau proche = null;
+            double meilleure = 1.2 * 1.2;
+            for (Cadeau c : actifs) {
+                if (!c.ouvert() && c.monde().equals(impact.getWorld())) {
+                    double d = c.distanceCarre(impact.getX(), impact.getY(), impact.getZ());
+                    if (d < meilleure) {
+                        meilleure = d;
+                        proche = c;
+                    }
                 }
             }
-        }
-        Interaction cible = proche;
-        plugin.sync(() -> {
-            if (cible != null) {
-                toucher(joueur, cible);
+            if (proche != null) {
+                toucher(joueur, proche);
             } else {
                 rendreBoule(joueur);
             }
@@ -352,27 +454,35 @@ public final class CadeauxVillage implements Listener {
     }
 
     @EventHandler
-    public void onClicDroit(PlayerInteractEntityEvent event) {
-        if (event.getHand() != EquipmentSlot.HAND || !estCadeau(event.getRightClicked())) {
+    public void onDegats(EntityDamageByEntityEvent event) {
+        if (event.getDamager() instanceof Firework feu && feu.getPersistentDataContainer().has(cleFeu, PersistentDataType.BYTE)) {
+            event.setCancelled(true);
+        }
+    }
+
+    // ---- clic sur un cadeau (fil principal)
+
+    /** Clic gauche ou droit : avec une boule magique en main, elle est utilisée ; sinon on explique au joueur. */
+    private void clicMain(Cadeau cadeau, Player joueur) {
+        if (cadeau.ouvert()) {
             return;
         }
-        Player joueur = event.getPlayer();
-        ItemStack enMain = joueur.getInventory().getItemInMainHand();
-        if (!boules.est(enMain)) {
-            return;
-        }
-        event.setCancelled(true);
-        Interaction interaction = (Interaction) event.getRightClicked();
-        plugin.sync(() -> {
-            ItemStack main = joueur.getInventory().getItemInMainHand();
-            if (!boules.est(main)) {
-                return;
-            }
+        ItemStack main = joueur.getInventory().getItemInMainHand();
+        if (boules.est(main)) {
             if (joueur.getGameMode() != GameMode.CREATIVE) {
                 main.subtract(1);
             }
-            toucher(joueur, interaction);
-        });
+            toucher(joueur, cadeau);
+            return;
+        }
+        long maintenant = System.currentTimeMillis();
+        Long fin = explications.get(joueur.getUniqueId());
+        if (fin != null && fin > maintenant) {
+            return;
+        }
+        explications.put(joueur.getUniqueId(), maintenant + 4000L);
+        plugin.messages().envoyer(joueur, "village.a-la-main");
+        joueur.playSound(joueur.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 0.7f, 0.8f);
     }
 
     private void rendreBoule(Player joueur) {
@@ -382,7 +492,7 @@ public final class CadeauxVillage implements Listener {
     }
 
     /** Fil principal : un cadeau ne s'ouvre qu'une fois, la touche d'après rend la boule. */
-    private void toucher(Player joueur, Interaction interaction) {
+    private void toucher(Player joueur, Cadeau cadeau) {
         if (!joueur.isOnline()) {
             return;
         }
@@ -392,23 +502,27 @@ public final class CadeauxVillage implements Listener {
             rendreBoule(joueur);
             return;
         }
-        Instance instance = actifs.remove(interaction.getUniqueId());
-        if (instance == null || !interaction.isValid()) {
+        if (cadeau.ouvert() || !actifs.contains(cadeau)) {
             rendreBoule(joueur);
             return;
         }
-        String rarete = interaction.getPersistentDataContainer().get(cleRarete, PersistentDataType.STRING);
-        if (rarete == null) {
-            rarete = "commun";
-        }
         attentes.put(joueur.getUniqueId(), System.currentTimeMillis() + plugin.getConfig().getInt("village.attente-secondes", 1) * 1000L);
-        Location position = interaction.getLocation();
-        instance.retirer();
+        long t = scene.tick();
+        cadeau.ouvrir(t);
+        Bukkit.getScheduler().runTaskLater(plugin, cadeau::retrecir, 5L);
+        Location position = new Location(cadeau.monde(), cadeau.x(), cadeau.y(), cadeau.z());
         World monde = position.getWorld();
-        monde.spawnParticle(Particle.DUST, position.clone().add(0, 0.5, 0), 20, 0.5, 0.5, 0.5, new Particle.DustOptions(Color.RED, 1.5f));
+        Color couleur = switch (cadeau.rarete) {
+            case "rare" -> Color.fromRGB(0x5AB4FF);
+            case "dore" -> Color.fromRGB(0xFFD24A);
+            default -> Color.RED;
+        };
+        monde.spawnParticle(Particle.DUST, position.clone().add(0, 0.6, 0), 24, 0.45, 0.45, 0.45, new Particle.DustOptions(couleur, 1.4f));
+        monde.spawnParticle(Particle.SNOWFLAKE, position.clone().add(0, 0.8, 0), 10, 0.3, 0.3, 0.3, 0.05);
         monde.playSound(position, Sound.ENTITY_CHICKEN_EGG, 1f, 1f);
         monde.playSound(position, Sound.BLOCK_AMETHYST_BLOCK_BREAK, 1f, 0.5f);
-        recompenser(joueur, rarete, position);
+        monde.playSound(position, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.6f, 1.4f);
+        recompenser(joueur, cadeau.rarete, position);
     }
 
     private void recompenser(Player joueur, String rarete, Location position) {
@@ -463,7 +577,7 @@ public final class CadeauxVillage implements Listener {
         }
     }
 
-    /** Cadeaux restés dans un chunk sauvegardé (versions précédentes) : plus suivis, on les retire. */
+    /** Cadeaux des versions 1.x à 2.0 (vraies entités) restés dans un chunk sauvegardé : retirés. */
     @EventHandler
     public void onEntites(EntitiesLoadEvent event) {
         for (Entity entite : event.getEntities()) {

@@ -30,6 +30,7 @@ import org.Cry_Legende.sHChristmasPresents.joueurs.Profils;
 import org.Cry_Legende.sHChristmasPresents.livraison.Livraisons;
 import org.Cry_Legende.sHChristmasPresents.placeholders.Expansion;
 import org.Cry_Legende.sHChristmasPresents.recap.Bilan;
+import org.Cry_Legende.sHChristmasPresents.rendu.Scene;
 import org.Cry_Legende.sHChristmasPresents.recap.Recapitulatif;
 import org.Cry_Legende.sHChristmasPresents.retour.Retour;
 import org.Cry_Legende.sHChristmasPresents.sapin.Sapin;
@@ -106,12 +107,14 @@ public final class SHChristmasPresents extends JavaPlugin {
     private BouleDeNeige boules;
     private CadeauxVillage village;
     private Clicker clicker;
+    private Scene scene;
     private Connexions connexions;
     private final Fermeture fermeture = new Fermeture(this);
     private ListeCommandes listeCommandes;
     private volatile Map<String, Son> sons = Map.of();
     private final Set<UUID> verrous = new HashSet<>();
     private BukkitTask ticker;
+    private long derniereAnnonce = System.currentTimeMillis();
 
     @Override
     public void onEnable() {
@@ -157,8 +160,9 @@ public final class SHChristmasPresents extends JavaPlugin {
         recap = new Recapitulatif(this);
         bilan = new Bilan(this, base, annee);
         boules = new BouleDeNeige(this);
-        village = new CadeauxVillage(this, boules);
-        clicker = new Clicker(this, base, annee);
+        scene = new Scene(this);
+        village = new CadeauxVillage(this, boules, scene);
+        clicker = new Clicker(this, base, annee, scene);
         try {
             base.bloquant(c -> {
                 etat.charger(c);
@@ -208,7 +212,7 @@ public final class SHChristmasPresents extends JavaPlugin {
         connexions = new Connexions(this);
         listeCommandes = new ListeCommandes(this);
         for (Listener l : List.of(new MenusListener(this::sync), new ObjetsMarques(this), connexions, cadeaux, petitsCadeaux,
-                drops, retour, boules, village, clicker, fermeture, listeCommandes)) {
+                drops, retour, boules, village, clicker, fermeture, listeCommandes, scene)) {
             getServer().getPluginManager().registerEvents(l, this);
         }
         enregistrer("shchristmaspresents", new CommandeAdmin(this));
@@ -219,6 +223,7 @@ public final class SHChristmasPresents extends JavaPlugin {
         if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
             new Expansion(this).register();
         }
+        scene.demarrer();
         village.demarrer();
         clicker.demarrer();
         ticker = Bukkit.getScheduler().runTaskTimer(this, this::tic, 20L, 100L);
@@ -257,6 +262,9 @@ public final class SHChristmasPresents extends JavaPlugin {
         }
         if (clicker != null && base != null) {
             clicker.arreter();
+        }
+        if (scene != null) {
+            scene.arreter();
         }
         if (base != null) {
             base.fermer();
@@ -329,6 +337,27 @@ public final class SHChristmasPresents extends JavaPlugin {
                 carte.visite(joueur);
             }
         }
+        annoncer(dates.phase(maintenant));
+    }
+
+    /**
+     * Annonce périodique (annonce: dans config.yml) : toutes les « minutes » pendant les phases listées, seulement si
+     * des joueurs sont en ligne. La première part « minutes » après le démarrage.
+     */
+    private void annoncer(Phase phase) {
+        ConfigurationSection a = getConfig().getConfigurationSection("annonce");
+        if (a == null || a.getInt("minutes", 0) <= 0 || Bukkit.getOnlinePlayers().isEmpty()) {
+            return;
+        }
+        if (!a.getStringList("phases").contains(phase.id())) {
+            return;
+        }
+        long maintenant = System.currentTimeMillis();
+        if (maintenant - derniereAnnonce < a.getInt("minutes") * 60_000L) {
+            return;
+        }
+        derniereAnnonce = maintenant;
+        org.Cry_Legende.sHChristmasPresents.commun.Console.executer(getLogger(), a.getStringList("commandes"));
     }
 
     /** Après /shchristmaspresents horloge : ce qui dépend de l'heure est revu tout de suite. */

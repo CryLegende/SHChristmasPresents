@@ -120,6 +120,15 @@ actions:
     commandes:
       - "say Le village de Noël est ouvert !"
 
+# Annonce périodique dans le chat : les commandes toutes les « minutes » pendant les phases listées, seulement si des
+# joueurs sont en ligne (la première part « minutes » après le démarrage). minutes: 0 = aucune annonce.
+annonce:
+  minutes: 0
+  phases:
+    - village
+  commandes:
+    - "say Le monde de Noël est ouvert !"
+
 # Actions quotidiennes : chaque jour de du à au, à heure ; id = <id>-<date>.
 chaque-jour:
   rappel-emplettes:
@@ -367,6 +376,9 @@ carte:
     sapin:
       case: 24
       condition: "compteur: offert >= 500"
+  # Première entrée dans le monde du village pendant la phase village, une fois par évènement.
+  commandes-premiere-visite:
+    - "shchristmaspresents give {joueur} 3"
   # Carte complète, une fois.
   commandes-complete:
     - "say {joueur} a complété sa carte de Noël !"
@@ -534,17 +546,23 @@ village:
     x2: -10.0
     y2: 64.0
     z2: -10.0
-  # Raretés : chance (poids), modeles (fichiers de models/ sans extension), commandes (%player% ou {joueur} ;
-  # « msg:<MiniMessage> » = message au joueur), feu-artifice (sans dégâts). Titre court : messages.yml village.titres.
+  # Raretés : chance (poids), modeles (fichiers de models/ sans extension), echelle (taille, 1 = celle du modèle),
+  # vitesse-couvercle (le couvercle tremble de temps en temps comme s'il voulait s'ouvrir ; 1.5 = plus vif et plus
+  # souvent), commandes (%player% ou {joueur} ; « msg:<MiniMessage> » = message au joueur), feu-artifice (sans dégâts).
+  # Titre court : messages.yml village.titres. Une boule lancée qui traverse la boîte d'un cadeau l'ouvre ; un cadeau
+  # n'apparaît jamais sur un escalier, une barrière, des feuilles, sous une entité (décoration, PNJ) ni dans un bloc.
   raretes:
     commun:
       chance: 68
+      vitesse-couvercle: 1.0
       modeles:
         - cadeau_rouge
       commandes:
         - "shchristmaspresents flocons %player% 2 village"
     rare:
       chance: 30
+      echelle: 1.2
+      vitesse-couvercle: 1.5
       modeles:
         - cadeau_bleu
       commandes:
@@ -557,8 +575,10 @@ village:
       commandes:
         - "shchristmaspresents flocons %player% 25 village"
 
-# Bonhommes de neige clicker (jamais blessés : ni pluie ni chaleur). Textes : messages.yml clicker.*.
+# Bonhommes de neige clicker : modèle animé montré par paquets, places dans bonhommes.yml (createclicker /
+# removeclicker). echelle = taille du bonhomme. Textes : messages.yml clicker.*.
 clicker:
+  echelle: 1.0
   max-cps: 6
   son: BLOCK_SNOW_BREAK
   # Clics pour le niveau 1, multipliés par multiplicateur-clics à chaque niveau.

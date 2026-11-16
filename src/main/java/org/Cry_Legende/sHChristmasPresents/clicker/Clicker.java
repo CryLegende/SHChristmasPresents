@@ -6,26 +6,20 @@ import net.kyori.adventure.title.Title;
 import org.Cry_Legende.sHChristmasPresents.SHChristmasPresents;
 import org.Cry_Legende.sHChristmasPresents.commun.Joueurs;
 import org.Cry_Legende.sHChristmasPresents.commun.Son;
+import org.Cry_Legende.sHChristmasPresents.rendu.Scene;
 import org.Cry_Legende.sHChristmasPresents.stockage.Base;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
-import org.bukkit.attribute.Attribute;
-import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Snowman;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.world.EntitiesLoadEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.NamespacedKey;
@@ -73,7 +67,9 @@ public final class Clicker implements Listener {
     private final Map<UUID, Donnees> donnees = new ConcurrentHashMap<>();
     private final Set<UUID> modifies = ConcurrentHashMap.newKeySet();
     private final Map<UUID, Long> derniersClics = new ConcurrentHashMap<>();
-    private final Set<UUID> bonhommes = ConcurrentHashMap.newKeySet();
+    private final Scene scene;
+    private final ModeleBonhomme modele = new ModeleBonhomme();
+    private final List<Bonhomme> bonhommes = new ArrayList<>();
     private final File fichierBonhommes;
     private BukkitTask ecriture;
     private volatile Son sonClic;
@@ -82,12 +78,13 @@ public final class Clicker implements Listener {
     private volatile String niveauTexte;
     private volatile String antiAfk;
 
-    public Clicker(SHChristmasPresents plugin, Base base, int annee) {
+    public Clicker(SHChristmasPresents plugin, Base base, int annee, Scene scene) {
         this.plugin = plugin;
         this.base = base;
         this.annee = annee;
+        this.scene = scene;
         this.cle = new NamespacedKey(plugin, "clicker_snowman");
-        this.fichierBonhommes = new File(plugin.getDataFolder(), "snowmen.yml");
+        this.fichierBonhommes = new File(plugin.getDataFolder(), "bonhommes.yml");
     }
 
     public void configurer() {
@@ -116,27 +113,100 @@ public final class Clicker implements Listener {
         }
     }
 
-    /** Démarrage : bonhommes de snowmen.yml, écriture toutes les minutes, reprise unique de playerdata.yml. */
+    /**
+     * Démarrage : bonhommes de bonhommes.yml (montrés par paquets), écriture toutes les minutes, reprise unique de
+     * playerdata.yml. Les vrais bonhommes de neige des versions 1.x à 2.0 (snowmen.yml) sont remplacés à leur chargement :
+     * leur place passe dans bonhommes.yml, l'entité est retirée et son chunk n'est plus gardé chargé.
+     */
     public void demarrer() {
-        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(fichierBonhommes);
         bonhommes.clear();
-        for (String id : yaml.getStringList("ids")) {
-            try {
-                bonhommes.add(UUID.fromString(id));
-            } catch (IllegalArgumentException ignored) {
-                // ligne invalide
+        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(fichierBonhommes);
+        for (String ligne : yaml.getStringList("bonhommes")) {
+            Location l = lirePlace(ligne);
+            if (l != null) {
+                ajouter(l);
+            } else {
+                plugin.getLogger().warning("bonhommes.yml : ligne ignorée (monde absent ou ligne invalide) : " + ligne);
             }
         }
         Bukkit.getScheduler().runTask(plugin, () -> {
-            for (UUID id : bonhommes) {
-                Entity e = Bukkit.getEntity(id);
-                if (e != null) {
-                    e.getLocation().getChunk().setForceLoaded(true);
-                }
+            for (org.bukkit.World monde : Bukkit.getWorlds()) {
+                remplacerAnciens(monde.getEntities());
             }
         });
-        ecriture = Bukkit.getScheduler().runTaskTimer(plugin, this::ecrire, 1200L, 1200L);
+        if (ecriture == null) {
+            ecriture = Bukkit.getScheduler().runTaskTimer(plugin, this::ecrire, 1200L, 1200L);
+        }
         reprendreAncienFichier();
+    }
+
+    private Location lirePlace(String ligne) {
+        String[] p = ligne.trim().split("\\s+");
+        if (p.length < 4) {
+            return null;
+        }
+        org.bukkit.World monde = Bukkit.getWorld(p[0]);
+        if (monde == null) {
+            return null;
+        }
+        try {
+            return new Location(monde, Double.parseDouble(p[1]), Double.parseDouble(p[2]), Double.parseDouble(p[3]),
+                    p.length > 4 ? Float.parseFloat(p[4]) : 0f, 0f);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private void ajouter(Location l) {
+        float echelle = (float) plugin.getConfig().getDouble("clicker.echelle", 1.0);
+        Bonhomme b = new Bonhomme(l.getWorld(), l.getX(), l.getY(), l.getZ(), l.getYaw(), echelle, modele, this::clicBonhomme);
+        bonhommes.add(b);
+        scene.ajouter(b);
+    }
+
+    /** Anciens bonhommes (vraies entités) : leur place est reprise, l'entité retirée (fil principal). */
+    private void remplacerAnciens(java.util.Collection<? extends Entity> entites) {
+        boolean change = false;
+        for (Entity e : entites) {
+            if (!e.getPersistentDataContainer().has(cle, PersistentDataType.BYTE)) {
+                continue;
+            }
+            Location l = e.getLocation();
+            boolean connu = false;
+            for (Bonhomme b : bonhommes) {
+                if (b.monde().equals(l.getWorld()) && b.position().distanceSquared(l) < 0.25) {
+                    connu = true;
+                    break;
+                }
+            }
+            if (!connu) {
+                ajouter(new Location(l.getWorld(), Math.round(l.getX() * 100) / 100.0, l.getY(), Math.round(l.getZ() * 100) / 100.0,
+                        Math.round(l.getYaw()), 0));
+                change = true;
+            }
+            l.getChunk().setForceLoaded(false);
+            e.remove();
+            plugin.getLogger().info("Bonhomme de neige " + (connu ? "en double retiré" : "remplacé par le modèle animé")
+                    + " en " + l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ());
+        }
+        if (change) {
+            sauverBonhommes();
+        }
+    }
+
+    @EventHandler
+    public void onChargement(EntitiesLoadEvent event) {
+        boolean ancien = false;
+        for (Entity e : event.getEntities()) {
+            if (e.getPersistentDataContainer().has(cle, PersistentDataType.BYTE)) {
+                ancien = true;
+                break;
+            }
+        }
+        if (ancien) {
+            List<Entity> entites = List.copyOf(event.getEntities());
+            plugin.sync(() -> remplacerAnciens(entites));
+        }
     }
 
     private void reprendreAncienFichier() {
@@ -246,53 +316,46 @@ public final class Clicker implements Listener {
     // ---- bonhommes (fil principal)
 
     public void creer(Location position) {
-        Snowman bonhomme = (Snowman) position.getWorld().spawnEntity(position, EntityType.SNOW_GOLEM);
-        bonhomme.setAI(false);
-        bonhomme.setCollidable(false);
-        bonhomme.setRemoveWhenFarAway(false);
-        bonhomme.setPersistent(true);
-        AttributeInstance vie = bonhomme.getAttribute(Attribute.MAX_HEALTH);
-        if (vie != null) {
-            vie.setBaseValue(2048);
-            bonhomme.setHealth(2048);
-        }
-        bonhomme.getPersistentDataContainer().set(cle, PersistentDataType.BYTE, (byte) 1);
-        position.getChunk().setForceLoaded(true);
-        bonhommes.add(bonhomme.getUniqueId());
+        Location l = position.clone();
+        l.setYaw(Math.round(l.getYaw()));
+        ajouter(l);
         sauverBonhommes();
     }
 
     public boolean retirerProche(Location position) {
         double meilleure = 9;
-        Entity cible = null;
-        for (Entity e : position.getWorld().getNearbyEntities(position, 3, 3, 3)) {
-            if (bonhommes.contains(e.getUniqueId())) {
-                double d = e.getLocation().distanceSquared(position);
+        Bonhomme cible = null;
+        for (Bonhomme b : bonhommes) {
+            if (b.monde().equals(position.getWorld())) {
+                double d = b.position().distanceSquared(position);
                 if (d < meilleure) {
                     meilleure = d;
-                    cible = e;
+                    cible = b;
                 }
             }
         }
         if (cible == null) {
             return false;
         }
-        cible.getLocation().getChunk().setForceLoaded(false);
-        cible.remove();
-        bonhommes.remove(cible.getUniqueId());
+        scene.retirer(cible);
+        bonhommes.remove(cible);
         sauverBonhommes();
         return true;
     }
 
     private void sauverBonhommes() {
         YamlConfiguration yaml = new YamlConfiguration();
-        List<String> ids = new ArrayList<>();
-        bonhommes.forEach(id -> ids.add(id.toString()));
-        yaml.set("ids", ids);
+        yaml.options().setHeader(List.of("Bonhommes de neige du clicker : monde x y z lacet (createclicker / removeclicker)."));
+        List<String> lignes = new ArrayList<>();
+        for (Bonhomme b : bonhommes) {
+            Location l = b.position();
+            lignes.add(l.getWorld().getName() + " " + l.getX() + " " + l.getY() + " " + l.getZ() + " " + Math.round(l.getYaw()));
+        }
+        yaml.set("bonhommes", lignes);
         try {
             yaml.save(fichierBonhommes);
         } catch (IOException e) {
-            plugin.getLogger().severe("snowmen.yml non écrit : " + e.getMessage());
+            plugin.getLogger().severe("bonhommes.yml non écrit : " + e.getMessage());
         }
     }
 
@@ -302,39 +365,27 @@ public final class Clicker implements Listener {
 
     public List<Location> positions() {
         List<Location> out = new ArrayList<>();
-        for (UUID id : bonhommes) {
-            Entity e = Bukkit.getEntity(id);
-            if (e != null) {
-                out.add(e.getLocation());
-            }
+        for (Bonhomme b : bonhommes) {
+            out.add(b.position());
         }
         return out;
     }
 
-    // ---- clics (fil du monde)
-
-    /**
-     * Un bonhomme clicker n'est jamais blessé : ni pluie ni chaleur, sinon il resterait dans son délai d'invulnérabilité
-     * et les coups des joueurs n'arriveraient plus. Un coup de joueur compte comme un clic.
-     */
-    @EventHandler
-    public void onDegats(EntityDamageEvent event) {
-        if (!bonhommes.contains(event.getEntity().getUniqueId())) {
-            return;
-        }
-        event.setCancelled(true);
-        if (event instanceof EntityDamageByEntityEvent coup && coup.getDamager() instanceof Player joueur) {
-            clic(joueur, event.getEntity());
+    /** Arrêt du plugin : les bonhommes quittent la scène (les clients les retirent). */
+    public void cacher() {
+        for (Bonhomme b : bonhommes) {
+            scene.retirer(b);
         }
     }
 
-    @EventHandler
-    public void onClicDroit(PlayerInteractEntityEvent event) {
-        if (event.getHand() != EquipmentSlot.HAND || !bonhommes.contains(event.getRightClicked().getUniqueId())) {
-            return;
+    // ---- clics (fil du monde)
+
+    /** Clic sur la zone d'un bonhomme (fil principal) : il saute, le clic compte. */
+    private void clicBonhomme(Bonhomme bonhomme, Player joueur) {
+        Location tete = bonhomme.position().add(0, 1.6 * bonhomme.echelle(), 0);
+        if (clic(joueur, tete)) {
+            bonhomme.sauter(scene.tick());
         }
-        event.setCancelled(true);
-        clic(event.getPlayer(), event.getRightClicked());
     }
 
     @EventHandler
@@ -342,7 +393,8 @@ public final class Clicker implements Listener {
         derniersClics.remove(event.getPlayer().getUniqueId());
     }
 
-    private void clic(Player joueur, Entity bonhomme) {
+    /** Un clic : vrai s'il a compté (ni anti-AFK, ni trop rapide). */
+    private boolean clic(Player joueur, Location tete) {
         FileConfiguration c = plugin.getConfig();
         UUID uuid = joueur.getUniqueId();
         Donnees d = donnees.computeIfAbsent(uuid, k -> new Donnees());
@@ -369,13 +421,13 @@ public final class Clicker implements Listener {
                 joueur.playSound(ici, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 joueur.showTitle(Title.title(Component.empty(), MiniMessage.miniMessage().deserialize(antiAfk),
                         Title.Times.times(Duration.ZERO, Duration.ofMillis(1000), Duration.ofMillis(500))));
-                return;
+                return false;
             }
             long maintenant = System.currentTimeMillis();
             long intervalle = 1000L / Math.max(1, c.getInt("clicker.max-cps", 6));
             Long dernier = derniersClics.get(uuid);
             if (dernier != null && maintenant - dernier < intervalle) {
-                return;
+                return false;
             }
             derniersClics.put(uuid, maintenant);
             d.clics++;
@@ -397,9 +449,8 @@ public final class Clicker implements Listener {
         if (son != null) {
             son.jouer(joueur);
         }
-        Location tete = bonhomme.getLocation().add(0, 1.5, 0);
-        bonhomme.getWorld().spawnParticle(Particle.SNOWFLAKE, tete, 7, 0.3, 0.4, 0.3, 0.05);
-        bonhomme.getWorld().spawnParticle(Particle.ITEM_SNOWBALL, tete, 3, 0.2, 0.2, 0.2, 0.1);
+        tete.getWorld().spawnParticle(Particle.SNOWFLAKE, tete, 7, 0.3, 0.4, 0.3, 0.05);
+        tete.getWorld().spawnParticle(Particle.ITEM_SNOWBALL, tete, 3, 0.2, 0.2, 0.2, 0.1);
         String requis = String.valueOf(clicsRequis(niveau + 1));
         String[] remplacements = {"%clicks%", String.valueOf(clics), "%required%", requis, "%level%", String.valueOf(niveau),
                 "%next_reward%", String.valueOf(recompense(niveau + 1))};
@@ -412,6 +463,7 @@ public final class Clicker implements Listener {
             int atteint = niveauAtteint;
             plugin.sync(() -> monter(joueur, atteint));
         }
+        return true;
     }
 
     private static String remplacer(String texte, String[] remplacements) {

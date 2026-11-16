@@ -88,6 +88,10 @@ public final class Expansion extends PlaceholderExpansion {
             case "phase" -> {
                 return plugin.phase().id();
             }
+            case "date" -> {
+                // Jour de l'évènement (horloge du plugin, horloge de test comprise) en AAAAMMJJ, pour les conditions numériques
+                return plugin.horloge().aujourdhui().format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE);
+            }
             case "phase_ligne" -> {
                 List<Object> r = new ArrayList<>();
                 for (String repere : Dates.REPERES) {
@@ -108,6 +112,14 @@ public final class Expansion extends PlaceholderExpansion {
             case "sapin_palier_suivant" -> {
                 Integer suivant = sapin.palierSuivant();
                 return suivant == null ? "" : suivant.toString();
+            }
+            // Avec le signe « % » (un « % » seul à côté d'un placeholder casse la lecture des placeholders suivants)
+            case "sapin_palier_suivant_affiche" -> {
+                Integer suivant = sapin.palierSuivant();
+                return suivant == null ? "100 %" : suivant + " %";
+            }
+            case "sapin_pourcent_affiche" -> {
+                return (int) Math.floor(sapin.pourcent()) + " %";
             }
             case "sapin_points" -> {
                 return Long.toString(sapin.points());

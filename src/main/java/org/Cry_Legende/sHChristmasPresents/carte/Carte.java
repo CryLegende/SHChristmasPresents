@@ -40,6 +40,7 @@ public final class Carte {
     private final Map<UUID, Set<String>> obtenus = new ConcurrentHashMap<>();
     private volatile List<Tampon> tampons = List.of();
     private volatile List<String> commandesComplete = List.of();
+    private volatile List<String> commandesPremiereVisite = List.of();
     private volatile String mondeVillage = "Christmas";
     private volatile int lignes = 4;
     private volatile int caseInfo = 4;
@@ -73,6 +74,7 @@ public final class Carte {
                 }
             }
             commandesComplete = LectureConfig.textes(section, "commandes-complete");
+            commandesPremiereVisite = LectureConfig.textes(section, "commandes-premiere-visite");
             mondeVillage = section.getString("monde-village", "Christmas");
             lignes = section.getInt("menu.lignes", 4);
             caseInfo = section.getInt("menu.case-info", 4);
@@ -227,6 +229,8 @@ public final class Carte {
                 accorder(joueur.getUniqueId(), joueur.getName(), t.id());
             }
         }
+        // Premier cadeau du monde de Noël (boules de neige offertes par le Lutin…), une fois par évènement
+        Console.executer(plugin.getLogger(), commandesPremiereVisite, "{joueur}", joueur.getName(), "{uuid}", joueur.getUniqueId().toString());
     }
 
     /** À la connexion : conditions déjà remplies (seuils changés, niveau du clicker…). */
