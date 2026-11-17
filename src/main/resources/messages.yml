@@ -66,7 +66,7 @@ flocons:
     bienvenue: ""
     cadeau-recu: ""
   sources:
-    porte: "Porte de l'Avent"
+    porte: "Case de l'Avent"
     defi: "Défi du Lutin"
     village: "Cadeau"
     ile: "Petit cadeau"
@@ -97,16 +97,16 @@ flocons:
 calendrier:
   pas-encore: "&7&l« &e&lSH &8&l» &7Le calendrier de l'Avent ouvre le &e{date}&7."
   termine: "&7&l« &e&lSH &8&l» &7Le calendrier de l'Avent est terminé."
-  a-venir: "&7&l« &e&lSH &8&l» &7La porte &en°{porte} &7s'ouvre le &e{date}&7."
-  deja-ouverte: "&7&l« &e&lSH &8&l» &7Tu as déjà ouvert la porte &en°{porte}&7."
-  manquee: "&7&l« &6&lSH &8&l» &7La porte &6n°{porte} &7ne se rattrape plus."
-  temps-de-jeu: "&7&l« &6&lSH &8&l» &7Ta porte s'ouvre dans &6{minutes} min &7de jeu."
-  temps-de-jeu-barre: "&7Ta porte s'ouvre dans &e{minutes} min &7de jeu"
-  ip: "&7&l« &c&lSH &8&l» &7Trop de comptes ont déjà ouvert cette porte depuis ta connexion."
-  ouverte: "&7&l« &a&lSH &8&l» &7Porte &an°{porte} &7ouverte ! {contenu}"
-  bienvenue: "&7&l« &a&lSH &8&l» &7Bienvenue dans l'évènement ! &b+{flocons} ❄ &7pour ta première porte."
-  palier: "&7&l« &a&lSH &8&l» &a{n} portes &7ouvertes ! {contenu}"
-  # Contenu affiché à l'ouverture et sur une porte ouverte ({flocons} = Flocons versés).
+  a-venir: "&7&l« &e&lSH &8&l» &7La case &en°{porte} &7s'ouvre le &e{date}&7."
+  deja-ouverte: "&7&l« &e&lSH &8&l» &7Tu as déjà ouvert la case &en°{porte}&7."
+  manquee: "&7&l« &6&lSH &8&l» &7La case &6n°{porte} &7ne se rattrape plus."
+  temps-de-jeu: "&7&l« &6&lSH &8&l» &7Ta case s'ouvre dans &6{minutes} min &7de jeu."
+  temps-de-jeu-barre: "&7Ta case s'ouvre dans &e{minutes} min &7de jeu"
+  ip: "&7&l« &c&lSH &8&l» &7Trop de comptes ont déjà ouvert cette case depuis ta connexion."
+  ouverte: "&7&l« &a&lSH &8&l» &7Case &an°{porte} &7ouverte ! {contenu}"
+  bienvenue: "&7&l« &a&lSH &8&l» &7Bienvenue dans l'évènement ! &b+{flocons} ❄ &7pour ta première case."
+  palier: "&7&l« &a&lSH &8&l» &a{n} cases &7ouvertes ! {contenu}"
+  # Contenu affiché à l'ouverture et sur une case ouverte ({flocons} = Flocons versés).
   contenu:
     defaut: "&b+{flocons} ❄"
     "2": "&b+{flocons} ❄ &7et &f5 boules de neige magiques"
@@ -129,35 +129,35 @@ calendrier:
     info:
       nom: "&c&lCalendrier de l'Avent"
       description:
-        - "&a{ouvertes}&7/{total} portes ouvertes"
+        - "&a{ouvertes}&7/{total} cases ouvertes"
         - "&7Prochain palier &f{palier}"
         - ""
-        - "&7Une porte par jour, et 3 jours"
-        - "&7pour rattraper une porte manquée."
+        - "&7Une case par jour, et 3 jours"
+        - "&7pour rattraper une case manquée."
     porte:
       a-venir:
-        nom: "&7Porte n°{porte}"
+        nom: "&7Case n°{porte}"
         lore:
           - "&8S'ouvre le {date}"
       ouvrable:
-        nom: "&a&lPorte n°{porte}"
+        nom: "&a&lCase n°{porte}"
         lore:
           - "&7Elle t'attend aujourd'hui."
           - ""
           - "&a» Clic pour l'ouvrir"
       rattrapable:
-        nom: "&ePorte n°{porte}"
+        nom: "&eCase n°{porte}"
         lore:
           - "&7À rattraper jusqu'au {limite}."
           - ""
           - "&e» Clic pour l'ouvrir"
       ouverte:
-        nom: "&2Porte n°{porte}"
+        nom: "&2Case n°{porte}"
         lore:
           - "&7Ouverte"
           - "{contenu}"
       manquee:
-        nom: "&8Porte n°{porte}"
+        nom: "&8Case n°{porte}"
         lore:
           - "&8Manquée"
 
@@ -242,9 +242,9 @@ carte:
         - "&7Offert à ta première visite"
         - "&7du monde de Noël."
     portes:
-      nom: "7 portes"
+      nom: "7 cases"
       description:
-        - "&7Ouvre 7 portes du calendrier"
+        - "&7Ouvre 7 cases du calendrier"
         - "&7de l'Avent (/calendrier)."
     maisons:
       nom: "Maisons en pain d'épice"
@@ -378,7 +378,7 @@ recap:
   sans-rang: "&8Pas contributeur cette année"
   # Une entrée par page, \n pour un retour à la ligne.
   pages:
-    - "&4&lMon Noël {annee}\n\n&0{pseudo}, voici ton Noël sur SkyHand.\n\n&2{portes}&0/{portes-total} portes de l'Avent\n&2{tampons}&0/{tampons-total} tampons sur ta carte\n&9{flocons} ❄ &0gagnés"
+    - "&4&lMon Noël {annee}\n\n&0{pseudo}, voici ton Noël sur SkyHand.\n\n&2{portes}&0/{portes-total} cases de l'Avent\n&2{tampons}&0/{tampons-total} tampons sur ta carte\n&9{flocons} ❄ &0gagnés"
     - "&4&lGrand Sapin\n\n&2{sapin} &0points offerts\n{rang}\n\n&4&lCadeaux\n\n&2{cadeaux} &0cadeau(x) offert(s)\n\n&8Merci, et à l'année prochaine !"
 
 # ---------------------------------------------------------------- placeholders
@@ -386,17 +386,17 @@ recap:
 placeholders:
   # %shchristmaspresents_porte_ligne%
   porte-ligne:
-    avant: "&7La porte n°1 s'ouvre le {date}"
-    attend: "&aTa porte n°{porte} t'attend !"
-    temps: "&7Ta porte s'ouvre dans {minutes} min de jeu"
-    rattraper-une: "&e1 porte à rattraper"
-    rattraper: "&e{n} portes à rattraper"
-    ouverte: "&7Porte n°{porte} déjà ouverte, à demain"
+    avant: "&7La case n°1 s'ouvre le {date}"
+    attend: "&aTa case n°{porte} t'attend !"
+    temps: "&7Ta case s'ouvre dans {minutes} min de jeu"
+    rattraper-une: "&e1 case à rattraper"
+    rattraper: "&e{n} cases à rattraper"
+    ouverte: "&7Case n°{porte} déjà ouverte, à demain"
     fin: "&7Le calendrier est terminé"
   # %shchristmaspresents_phase_ligne% ({avent}, {village}, {veillee}, {fin-gains}, {emplettes}, {cloture}, {apres})
   phase-ligne:
     avant: "&7L'Avent commence le {avent}"
-    avent: "&7Une porte par jour, le monde de Noël ouvre le {village}"
+    avent: "&7Une case par jour, le monde de Noël ouvre le {village}"
     village: "&7Le monde de Noël est ouvert jusqu'au {cloture}"
     emplettes: "&7Dernières emplettes jusqu'au {cloture}"
     cloture: "&7Noël est fini, merci d'avoir participé !"
@@ -421,7 +421,7 @@ admin:
   hors-gains: "&7&l« &e&lSH &8&l» &7Hors de la période de gains, rien n'est compté."
   redemarrage-requis: "&7&l« &6&lSH &8&l» &7annee et base-de-donnees changent au prochain démarrage."
   info-flocons: "&e{joueur} &7a gagné &b{total} ❄&7, dont &b+{jour} &7aujourd'hui, multiplicateur &e{facteur}"
-  info-evenement: "&7Portes &e{portes}&7, tampons &e{tampons}/{tampons-total}&7, sapin &e{sapin}&7, cadeaux offerts &e{cadeaux}&7, livraisons en attente &e{livraisons}"
+  info-evenement: "&7Cases &e{portes}&7, tampons &e{tampons}/{tampons-total}&7, sapin &e{sapin}&7, cadeaux offerts &e{cadeaux}&7, livraisons en attente &e{livraisons}"
   flocons-usage: "&7&l« &e&lSH &8&l» &7Tape &e/shchristmaspresents flocons <joueur> <montant> <source>"
   source-inconnue: "&7&l« &c&lSH &8&l» &7La source &c{source} &7n'existe pas."
   flocons-fait: "&7&l« &a&lSH &8&l» &a{joueur} &7reçoit &b{verse} ❄ &7(&f{montant} &7de base, {source})."

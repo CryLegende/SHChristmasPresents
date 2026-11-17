@@ -265,7 +265,8 @@ calendrier:
       - 41
       - 49
     case-info: 4
-    cadre: BLACK_STAINED_GLASS_PANE
+    # Pas de bordure : les cases manquées sont déjà des vitres noires.
+    cadre: AIR
     # Vitres de couleur à ces cases, avant le cadre (absent = aucune).
     accent: RED_STAINED_GLASS_PANE
     cases-accent: [3, 5, 9, 17]
