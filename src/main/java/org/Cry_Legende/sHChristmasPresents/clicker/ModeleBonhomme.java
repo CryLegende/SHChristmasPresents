@@ -11,8 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Le bonhomme de neige du clicker, en block displays : trois boules de neige (chacune deux cubes croisés à 45° pour
- * l'arrondir), écharpe rouge, boutons, visage (yeux, carotte, sourire), chapeau haut de forme, bras en bois. Pied à
+ * Le bonhomme de neige du clicker, en block displays : trois boules de neige carrées, écharpe rouge (tour de cou,
+ * nœud, pan), boutons, visage (yeux, carotte, sourire), chapeau haut de forme, bras en bois. Pied à
  * l'origine, devant vers +z, environ 2,25 blocs de haut. Groupes animés : tete (pivot au cou), bras-g et bras-d (pivot
  * à l'épaule). Les poses de chaque image sont calculées une fois, dans le repère du modèle.
  */
@@ -36,19 +36,20 @@ final class ModeleBonhomme {
 
     ModeleBonhomme() {
         List<Piece> p = new ArrayList<>();
-        // Corps
+        // Corps : deux boules carrées, comme un bonhomme de neige du jeu
         boite(p, "corps", Material.SNOW_BLOCK, 0, 0.39f, 0, 0.80f, 0.78f, 0.80f, 0, 0, 0);
-        boite(p, "corps", Material.SNOW_BLOCK, 0, 0.39f, 0, 0.66f, 0.70f, 0.66f, 0, 45, 0);
         boite(p, "corps", Material.SNOW_BLOCK, 0, 1.06f, 0, 0.62f, 0.60f, 0.62f, 0, 0, 0);
-        boite(p, "corps", Material.SNOW_BLOCK, 0, 1.06f, 0, 0.50f, 0.54f, 0.50f, 0, 45, 0);
-        for (float by : new float[]{0.90f, 1.04f, 1.18f}) {
-            boite(p, "corps", Material.COAL_BLOCK, 0, by, 0.315f, 0.075f, 0.075f, 0.04f, 0, 0, 0);
+        // Boutons : petits carrés plats, comme les yeux
+        for (float by : new float[]{0.92f, 1.06f, 1.20f}) {
+            boite(p, "corps", Material.COAL_BLOCK, 0, by, 0.322f, 0.08f, 0.08f, 0.03f, 0, 0, 0);
         }
-        boite(p, "corps", Material.RED_WOOL, 0, 1.37f, 0, 0.58f, 0.10f, 0.58f, 0, 0, 0);
-        boite(p, "corps", Material.RED_WOOL, 0.215f, 1.21f, 0.29f, 0.13f, 0.30f, 0.05f, 0, 0, -10);
+        // Écharpe : un tour de cou plus large que les deux boules, un nœud devant à droite et un pan qui tombe
+        // devant la boule du milieu (posé sur sa face, pas dedans)
+        boite(p, "corps", Material.RED_WOOL, 0, 1.38f, 0, 0.68f, 0.12f, 0.68f, 0, 0, 0);
+        boite(p, "corps", Material.RED_WOOL, 0.17f, 1.37f, 0.355f, 0.15f, 0.13f, 0.05f, 0, 0, 0);
+        boite(p, "corps", Material.RED_WOOL, 0.19f, 1.19f, 0.338f, 0.13f, 0.30f, 0.04f, 0, 0, -8);
         // Tête
         boite(p, "tete", Material.SNOW_BLOCK, 0, 1.63f, 0, 0.48f, 0.46f, 0.48f, 0, 0, 0);
-        boite(p, "tete", Material.SNOW_BLOCK, 0, 1.63f, 0, 0.32f, 0.40f, 0.32f, 0, 45, 0);
         boite(p, "tete", Material.COAL_BLOCK, -0.10f, 1.69f, 0.243f, 0.07f, 0.07f, 0.03f, 0, 0, 0);
         boite(p, "tete", Material.COAL_BLOCK, 0.10f, 1.69f, 0.243f, 0.07f, 0.07f, 0.03f, 0, 0, 0);
         boite(p, "tete", Material.ORANGE_CONCRETE, 0, 1.615f, 0.35f, 0.06f, 0.06f, 0.22f, 8, 0, 0);

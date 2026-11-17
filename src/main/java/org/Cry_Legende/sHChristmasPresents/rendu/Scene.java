@@ -162,6 +162,17 @@ public final class Scene implements Listener {
         return true;
     }
 
+    boolean enTrace() {
+        return plugin.getConfig().getBoolean("debug", false);
+    }
+
+    /** Ligne de debug (config debug: true). */
+    void trace(String texte) {
+        if (plugin instanceof org.Cry_Legende.sHChristmasPresents.SHChristmasPresents p) {
+            p.debug(texte);
+        }
+    }
+
     boolean possede(int id) {
         return zones.containsKey(id);
     }

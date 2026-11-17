@@ -68,6 +68,8 @@ public final class CadeauxVillage implements Listener {
     private final NamespacedKey cleFeu;
     private final List<Cadeau> actifs = new ArrayList<>();
     private final Map<UUID, Snowball> lancees = new ConcurrentHashMap<>();
+    /** Boules lancées par un clic sur un cadeau : ce cadeau est visé avec une marge plus large. */
+    private final Map<UUID, Cadeau> visees = new ConcurrentHashMap<>();
     private final Map<UUID, Long> attentes = new ConcurrentHashMap<>();
     private final Map<UUID, Long> explications = new ConcurrentHashMap<>();
     private volatile Map<String, Modeles.Modele> modeles = Map.of();
@@ -394,13 +396,22 @@ public final class CadeauxVillage implements Listener {
             Snowball boule = e.getValue();
             if (!boule.isValid()) {
                 // Arrêtée par un bloc ou une entité : onImpact s'en charge (ou elle a disparu)
-                Bukkit.getScheduler().runTaskLater(plugin, () -> lancees.remove(e.getKey()), 2L);
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    lancees.remove(e.getKey());
+                    visees.remove(e.getKey());
+                }, 2L);
                 continue;
             }
             Location p = boule.getLocation();
             Vector v = boule.getVelocity();
             Cadeau cible = null;
             double meilleur = Double.MAX_VALUE;
+            Cadeau vise = visees.get(e.getKey());
+            if (vise != null && !vise.ouvert() && actifs.contains(vise) && vise.monde().equals(p.getWorld())
+                    && vise.touche(p.getX(), p.getY(), p.getZ(), v.getX(), v.getY(), v.getZ(), 0.6) >= 0) {
+                cible = vise;
+                meilleur = -1;
+            }
             for (Cadeau c : actifs) {
                 if (c.ouvert() || !c.monde().equals(p.getWorld())) {
                     continue;
@@ -412,6 +423,7 @@ public final class CadeauxVillage implements Listener {
                 }
             }
             if (cible != null && lancees.remove(e.getKey()) != null) {
+                visees.remove(e.getKey());
                 boule.remove();
                 if (boule.getShooter() instanceof Player joueur) {
                     toucher(joueur, cible);
@@ -431,8 +443,14 @@ public final class CadeauxVillage implements Listener {
         UUID id = boule.getUniqueId();
         Location impact = boule.getLocation();
         plugin.sync(() -> {
+            Cadeau vise = visees.remove(id);
             if (lancees.remove(id) == null) {
                 return; // déjà comptée par le suivi
+            }
+            if (vise != null && !vise.ouvert() && actifs.contains(vise)
+                    && vise.distanceCarre(impact.getX(), impact.getY(), impact.getZ()) < 2.5 * 2.5) {
+                toucher(joueur, vise);
+                return;
             }
             Cadeau proche = null;
             double meilleure = 1.2 * 1.2;
@@ -462,17 +480,30 @@ public final class CadeauxVillage implements Listener {
 
     // ---- clic sur un cadeau (fil principal)
 
-    /** Clic gauche ou droit : avec une boule magique en main, elle est utilisée ; sinon on explique au joueur. */
+    /** Clic gauche ou droit : avec une boule magique en main, elle est lancée ; sinon on explique au joueur. */
     private void clicMain(Cadeau cadeau, Player joueur) {
         if (cadeau.ouvert()) {
             return;
         }
         ItemStack main = joueur.getInventory().getItemInMainHand();
         if (boules.est(main)) {
+            // De près, le client vise la zone du cadeau au lieu de lancer la boule : on la lance pour lui, et le suivi
+            // des boules ouvre le cadeau qu'elle traverse.
+            if (joueur.hasCooldown(Material.SNOWBALL)) {
+                return;
+            }
+            ItemStack lancee = main.asOne();
             if (joueur.getGameMode() != GameMode.CREATIVE) {
                 main.subtract(1);
             }
-            toucher(joueur, cadeau);
+            joueur.setCooldown(Material.SNOWBALL, 4);
+            Snowball boule = joueur.launchProjectile(Snowball.class);
+            boule.setItem(lancee);
+            boule.getPersistentDataContainer().set(boules.cle(), PersistentDataType.BYTE, (byte) 1);
+            lancees.put(boule.getUniqueId(), boule);
+            visees.put(boule.getUniqueId(), cadeau);
+            joueur.swingMainHand();
+            joueur.getWorld().playSound(joueur.getLocation(), Sound.ENTITY_SNOWBALL_THROW, 0.5f, 0.4f);
             return;
         }
         long maintenant = System.currentTimeMillis();

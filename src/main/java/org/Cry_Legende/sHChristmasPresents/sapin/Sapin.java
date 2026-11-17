@@ -82,6 +82,7 @@ public final class Sapin {
     volatile int caseTop = 31;
     volatile List<Integer> casesOffrandes = List.of(19, 21, 23, 25);
     volatile Material cadre = Material.BLACK_STAINED_GLASS_PANE;
+    volatile org.Cry_Legende.sHChristmasPresents.commun.Accent accent = org.Cry_Legende.sHChristmasPresents.commun.Accent.AUCUN;
 
     public Sapin(SHChristmasPresents plugin, Base base, int annee) {
         this.plugin = plugin;
@@ -125,6 +126,7 @@ public final class Sapin {
             casesOffrandes = cases.isEmpty() ? List.of(19, 21, 23, 25) : List.copyOf(cases);
             Material vitre = Material.matchMaterial(menu.getString("cadre", "BLACK_STAINED_GLASS_PANE"));
             cadre = vitre == null ? Material.AIR : vitre;
+            accent = org.Cry_Legende.sHChristmasPresents.commun.Accent.lire(menu);
         }
     }
 

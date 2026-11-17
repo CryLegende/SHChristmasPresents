@@ -51,6 +51,7 @@ final class MenuCalendrier extends Menu {
                 rafraichir();
             });
         }
+        accent(calendrier.accent());
         cadre(calendrier.cadre());
     }
 }

@@ -45,6 +45,7 @@ public final class Carte {
     private volatile int lignes = 4;
     private volatile int caseInfo = 4;
     private volatile Material cadre = Material.BLACK_STAINED_GLASS_PANE;
+    private volatile org.Cry_Legende.sHChristmasPresents.commun.Accent accent = org.Cry_Legende.sHChristmasPresents.commun.Accent.AUCUN;
 
     public Carte(SHChristmasPresents plugin, Base base, int annee) {
         this.plugin = plugin;
@@ -80,6 +81,7 @@ public final class Carte {
             caseInfo = section.getInt("menu.case-info", 4);
             Material vitre = Material.matchMaterial(section.getString("menu.cadre", "BLACK_STAINED_GLASS_PANE"));
             cadre = vitre == null ? Material.AIR : vitre;
+            accent = org.Cry_Legende.sHChristmasPresents.commun.Accent.lire(section.getConfigurationSection("menu"));
         }
         tampons = List.copyOf(lus);
     }
@@ -139,6 +141,10 @@ public final class Carte {
 
     int caseInfo() {
         return caseInfo;
+    }
+
+    org.Cry_Legende.sHChristmasPresents.commun.Accent accent() {
+        return accent;
     }
 
     Material cadre() {

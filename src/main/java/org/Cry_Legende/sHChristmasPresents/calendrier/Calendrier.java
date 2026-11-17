@@ -50,6 +50,7 @@ public final class Calendrier {
     private volatile List<Integer> cases = List.of();
     private volatile int caseInfo = 4;
     private volatile Material cadre = Material.BLACK_STAINED_GLASS_PANE;
+    private volatile org.Cry_Legende.sHChristmasPresents.commun.Accent accent = org.Cry_Legende.sHChristmasPresents.commun.Accent.AUCUN;
     private volatile Map<EtatPorte, ObjetConfig> objets = Map.of();
     private volatile Map<EtatPorte, ObjetConfig> objetsSpeciale = Map.of();
 
@@ -109,6 +110,7 @@ public final class Calendrier {
         caseInfo = menu == null ? 4 : menu.getInt("case-info", 4);
         Material vitre = menu == null ? Material.BLACK_STAINED_GLASS_PANE : Material.matchMaterial(menu.getString("cadre", "BLACK_STAINED_GLASS_PANE"));
         cadre = vitre == null ? Material.AIR : vitre;
+        accent = org.Cry_Legende.sHChristmasPresents.commun.Accent.lire(menu);
         objets = lireObjets(menu == null ? null : menu.getConfigurationSection("objets"), defauts());
         objetsSpeciale = lireObjets(menu == null ? null : menu.getConfigurationSection("objets-speciale"), objets);
     }
@@ -355,6 +357,10 @@ public final class Calendrier {
 
     int caseInfo() {
         return caseInfo;
+    }
+
+    org.Cry_Legende.sHChristmasPresents.commun.Accent accent() {
+        return accent;
     }
 
     Material cadre() {

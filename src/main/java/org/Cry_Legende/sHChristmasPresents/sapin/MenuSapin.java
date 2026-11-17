@@ -70,6 +70,7 @@ final class MenuSapin extends Menu {
         List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
         lignes.forEach(l -> lore.add(org.Cry_Legende.sHChristmasPresents.commun.Messages.objetTexte(l)));
         poser(sapin.caseTop, ObjetConfig.simple(Material.GOLDEN_HELMET).creer(messages.objet("sapin.menu.top.nom"), lore), null);
+        accent(sapin.accent);
         cadre(sapin.cadre);
     }
 }

@@ -266,6 +266,9 @@ calendrier:
       - 49
     case-info: 4
     cadre: BLACK_STAINED_GLASS_PANE
+    # Vitres de couleur à ces cases, avant le cadre (absent = aucune).
+    accent: RED_STAINED_GLASS_PANE
+    cases-accent: [3, 5, 9, 17]
     # Objet de chaque état (materiau, modele = item_model, lueur, tete = texture base64 d'une PLAYER_HEAD).
     objets:
       a-venir:
@@ -339,6 +342,9 @@ sapin:
       - 23
       - 25
     cadre: BLACK_STAINED_GLASS_PANE
+    # Vitres de couleur à ces cases, avant le cadre (absent = aucune).
+    accent: RED_STAINED_GLASS_PANE
+    cases-accent: [3, 5, 9, 17]
 
 carte:
   # Monde du village : la première entrée pendant la phase village pose les tampons « auto: premiere-visite ».
@@ -391,6 +397,9 @@ carte:
     lignes: 4
     case-info: 4
     cadre: BLACK_STAINED_GLASS_PANE
+    # Vitres de couleur à ces cases, avant le cadre (absent = aucune).
+    accent: RED_STAINED_GLASS_PANE
+    cases-accent: [3, 5, 9, 17]
 
 # Boutique (de village à cloture). Chaque article : prix, limite-jour et limite-total (0 = sans limite), requiert (un
 # autre article déjà acheté), commandes. Un article sans commande ne se vend pas. Noms : messages.yml, boutique.articles.

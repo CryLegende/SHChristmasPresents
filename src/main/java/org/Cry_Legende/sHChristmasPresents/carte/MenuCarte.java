@@ -35,6 +35,7 @@ final class MenuCarte extends Menu {
                     messages.objet(obtenu ? "carte.menu.tampon-obtenu" : "carte.menu.tampon-manquant", "{tampon}", messages.brut(base + ".nom")),
                     messages.lore(base + ".description")), null);
         }
+        accent(carte.accent());
         cadre(carte.cadre());
     }
 }

@@ -60,6 +60,19 @@ public abstract class Menu implements InventoryHolder {
         }
     }
 
+    /** Vitres de couleur aux cases de l'accent, sur les cases encore libres (avant le cadre). */
+    protected void accent(Accent accent) {
+        if (accent == null || accent.materiau().isAir()) {
+            return;
+        }
+        ItemStack verre = ObjetConfig.simple(accent.materiau()).creer(Component.empty(), List.of());
+        for (int c : accent.cases()) {
+            if (c >= 0 && c < inventaire.getSize() && inventaire.getItem(c) == null) {
+                inventaire.setItem(c, verre);
+            }
+        }
+    }
+
     /** Cadre noir sur les cases libres du bord. */
     protected void cadre(Material vitre) {
         if (vitre == null || vitre == Material.AIR) {
