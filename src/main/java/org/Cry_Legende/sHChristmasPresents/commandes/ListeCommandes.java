@@ -60,6 +60,12 @@ public final class ListeCommandes implements Listener {
                 }
             }
         }
+        // Commandes d'autres plugins liées à l'évènement (liste-commandes-autres : le menu /noel), toutes formes
+        for (String autre : plugin.getConfig().getStringList("liste-commandes-autres")) {
+            String nom = autre.toLowerCase(Locale.ROOT).replaceFirst("^/", "");
+            out.add(nom);
+            out.add("deluxemenus:" + nom);
+        }
         return out;
     }
 
@@ -70,7 +76,8 @@ public final class ListeCommandes implements Listener {
             return;
         }
         Set<String> caches = nomsCaches();
-        event.getCommands().removeIf(nom -> caches.contains(nom.toLowerCase(Locale.ROOT)));
+        event.getCommands().removeIf(nom -> caches.contains(nom.toLowerCase(Locale.ROOT))
+                || caches.stream().anyMatch(c -> nom.toLowerCase(Locale.ROOT).endsWith(":" + c)));
     }
 
     /** Appelé au tic : à un changement de phase, chaque joueur reçoit sa nouvelle liste de commandes. */

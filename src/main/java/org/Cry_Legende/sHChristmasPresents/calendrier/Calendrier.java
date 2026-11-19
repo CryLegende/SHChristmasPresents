@@ -318,14 +318,36 @@ public final class Calendrier {
             String cle = "calendrier.paliers-contenu." + total;
             messages.envoyer(joueur, "calendrier.palier", "{n}", total, "{contenu}", messages.existe(cle) ? messages.brut(cle) : "");
         }
-        Profil profil = plugin.profils().obtenir(uuid, pseudo);
-        if (profil.bienvenue == null) {
-            profil.bienvenue = maintenant.toLocalDateTime();
-            plugin.profils().sauver(profil);
-            if (bienvenue > 0) {
-                int cadeau = plugin.flocons().gagner(uuid, pseudo, bienvenue, "bienvenue", false);
-                messages.envoyer(joueur, "calendrier.bienvenue", "{flocons}", cadeau);
+        accueillir(joueur, "calendrier.bienvenue", false);
+    }
+
+    /**
+     * Flocons de bienvenue, une fois par évènement : à la 1re case ouverte ou à la 1re visite du monde de Noël, selon ce
+     * qui vient en premier. Pour la visite ({@code verifierEmpreinte}), pas plus de comptes-par-ip comptes d'une même
+     * connexion (la case a déjà sa propre limite).
+     */
+    public void accueillir(Player joueur, String cleMessage, boolean verifierEmpreinte) {
+        UUID uuid = joueur.getUniqueId();
+        Profil profil = plugin.profils().obtenir(uuid, joueur.getName());
+        if (profil.bienvenue != null || !plugin.dates().gains(plugin.horloge().maintenant())) {
+            return;
+        }
+        if (verifierEmpreinte && comptesParIp > 0 && profil.empreinte != null) {
+            int deja = 0;
+            for (Profil autre : plugin.profils().tous()) {
+                if (autre != profil && autre.bienvenue != null && profil.empreinte.equals(autre.empreinte)) {
+                    deja++;
+                }
             }
+            if (deja >= comptesParIp) {
+                return;
+            }
+        }
+        profil.bienvenue = plugin.horloge().local();
+        plugin.profils().sauver(profil);
+        if (bienvenue > 0) {
+            int cadeau = plugin.flocons().gagner(uuid, joueur.getName(), bienvenue, "bienvenue", false);
+            plugin.messages().envoyer(joueur, cleMessage, "{flocons}", cadeau);
         }
     }
 

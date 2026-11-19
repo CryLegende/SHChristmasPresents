@@ -125,6 +125,12 @@ plugins/SHChristmasPresents/
 └── models/          modèles BDEngine des cadeaux du village
 </pre>
 
+Depuis la 2.2.2 : `connexion` (message du jour à la connexion, une fois par jour et par joueur, commandes par phase),
+`liste-commandes-autres` (commandes d'autres plugins, comme le menu `/noel`, retirées de la liste du client hors de
+l'évènement), `possede` sur un article de la boutique (permission que l'article donne : un joueur qui l'a déjà le voit
+obtenu). Les Flocons de bienvenue partent à la 1re case ou à la 1re visite du monde de Noël, au plus `comptes-par-ip`
+comptes d'une même connexion.
+
 Les vrais bonhommes de neige des versions 1.x à 2.0 (`snowmen.yml`) sont remplacés à leur chargement : leur place passe
 dans `bonhommes.yml`, l'entité est retirée et son chunk n'est plus gardé chargé.
 

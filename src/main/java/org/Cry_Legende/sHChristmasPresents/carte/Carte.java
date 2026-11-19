@@ -237,6 +237,7 @@ public final class Carte {
         }
         // Premier cadeau du monde de Noël (boules de neige offertes par le Lutin…), une fois par évènement
         Console.executer(plugin.getLogger(), commandesPremiereVisite, "{joueur}", joueur.getName(), "{uuid}", joueur.getUniqueId().toString());
+        plugin.calendrier().accueillir(joueur, "calendrier.bienvenue-monde", true);
     }
 
     /** À la connexion : conditions déjà remplies (seuils changés, niveau du clicker…). */

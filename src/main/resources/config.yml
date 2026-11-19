@@ -120,6 +120,19 @@ actions:
     commandes:
       - "say Le village de Noël est ouvert !"
 
+# Message du jour à la connexion : une fois par jour et par joueur, delai-secondes après l'arrivée, pendant la phase
+# donnée. Commandes lancées depuis la console ({joueur} = pseudo).
+connexion:
+  delai-secondes: 5
+  phases:
+    village:
+      - 'sm {joueur} &2&lNoël sur SkyHand\n&fCalendrier de l''Avent, défis du Lutin, Grand Sapin et monde de Noël • [/noel]'
+
+# Commandes d'autres plugins retirées de la liste du client hors de l'évènement, comme celles du plugin (le menu /noel
+# de DeluxeMenus). À mettre aussi dans la liste blanche d'EasyCommandBlocker pour qu'elles s'affichent pendant.
+liste-commandes-autres:
+  - noel
+
 # Annonce périodique dans le chat : les commandes toutes les « minutes » pendant les phases listées, seulement si des
 # joueurs sont en ligne (la première part « minutes » après le démarrage). minutes: 0 = aucune annonce.
 annonce:

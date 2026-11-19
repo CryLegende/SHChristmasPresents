@@ -18,9 +18,28 @@ import org.bukkit.event.player.PlayerQuitEvent;
 public final class Connexions implements Listener {
 
     private final SHChristmasPresents plugin;
+    /** Jour du dernier message du jour de chaque joueur (mémoire : un redémarrage peut le renvoyer une fois). */
+    private final java.util.Map<java.util.UUID, java.time.LocalDate> messageDuJour = new java.util.concurrent.ConcurrentHashMap<>();
 
     public Connexions(SHChristmasPresents plugin) {
         this.plugin = plugin;
+    }
+
+    /** Commandes de connexion.phases.&lt;phase&gt; (console, {joueur}), une fois par jour et par joueur. */
+    private void messageDuJour(Player joueur) {
+        org.bukkit.configuration.ConfigurationSection c = plugin.getConfig().getConfigurationSection("connexion.phases");
+        if (c == null || !joueur.isOnline()) {
+            return;
+        }
+        java.util.List<String> commandes = c.getStringList(plugin.phase().id());
+        if (commandes.isEmpty()) {
+            return;
+        }
+        java.time.LocalDate jour = plugin.horloge().aujourdhui();
+        if (jour.equals(messageDuJour.put(joueur.getUniqueId(), jour))) {
+            return;
+        }
+        org.Cry_Legende.sHChristmasPresents.commun.Console.executer(plugin.getLogger(), commandes, "{joueur}", joueur.getName());
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -49,6 +68,8 @@ public final class Connexions implements Listener {
             plugin.calendrier().rappel(joueur);
         }, 60L);
         Bukkit.getScheduler().runTaskLater(plugin, () -> plugin.recap().connexion(joueur), 100L);
+        long delai = Math.max(1, plugin.getConfig().getLong("connexion.delai-secondes", 5)) * 20L;
+        Bukkit.getScheduler().runTaskLater(plugin, () -> messageDuJour(joueur), delai);
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
