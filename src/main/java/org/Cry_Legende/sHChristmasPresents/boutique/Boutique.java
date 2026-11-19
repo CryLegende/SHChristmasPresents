@@ -32,7 +32,12 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class Boutique {
 
-    public record Article(String id, int prix, int limiteJour, int limiteTotal, String requiert, java.time.ZonedDateTime des, List<String> commandes) {
+    /**
+     * Article de la boutique. {@code possede} : permission que l'article donne ; un joueur qui l'a déjà (gagnée dans la
+     * box, par exemple) voit l'article obtenu et ne le paie pas une deuxième fois.
+     */
+    public record Article(String id, int prix, int limiteJour, int limiteTotal, String requiert, java.time.ZonedDateTime des,
+                          List<String> commandes, String possede) {
     }
 
     /** Pourquoi un article peut ou ne peut pas être acheté maintenant. */
@@ -77,9 +82,10 @@ public final class Boutique {
                         plugin.getLogger().warning("boutique.articles." + id + ".des illisible (AAAA-MM-JJTHH:MM) : " + texteDes);
                     }
                 }
+                String possede = a.getString("possede", "");
                 lus.put(id, new Article(id, Math.max(0, a.getInt("prix", 0)), Math.max(0, a.getInt("limite-jour", 0)),
                         Math.max(0, a.getInt("limite-total", 0)), requiert == null || requiert.isBlank() ? null : requiert.trim(),
-                        des, LectureConfig.textes(a, "commandes")));
+                        des, LectureConfig.textes(a, "commandes"), possede == null || possede.isBlank() ? null : possede.trim()));
             }
         }
         articles = java.util.Collections.unmodifiableMap(lus);
@@ -124,6 +130,15 @@ public final class Boutique {
         return a == null || !jour.equals(a.jour) ? 0 : a.duJour.getOrDefault(article, 0);
     }
 
+    /** Vrai si le joueur (en ligne) a déjà la permission que l'article donne. */
+    private boolean possede(UUID uuid, Article article) {
+        if (article == null || article.possede() == null) {
+            return false;
+        }
+        org.bukkit.entity.Player joueur = org.bukkit.Bukkit.getPlayer(uuid);
+        return joueur != null && joueur.hasPermission(article.possede());
+    }
+
     /** État d'un article pour ce joueur ; solde &lt; 0 = solde pas lu (on ne juge pas le prix). */
     public Etat etat(UUID uuid, Article article, long solde) {
         ZonedDateTime maintenant = plugin.horloge().maintenant();
@@ -137,8 +152,11 @@ public final class Boutique {
         if (article.des() != null && maintenant.isBefore(article.des())) {
             return Etat.BIENTOT;
         }
-        if (article.requiert() != null && achatsTotal(uuid, article.requiert()) < 1) {
+        if (article.requiert() != null && achatsTotal(uuid, article.requiert()) < 1 && !possede(uuid, articles.get(article.requiert()))) {
             return Etat.REQUIERT;
+        }
+        if (possede(uuid, article)) {
+            return Etat.DEJA;
         }
         int total = achatsTotal(uuid, article.id());
         if (article.limiteTotal() > 0 && total >= article.limiteTotal()) {

@@ -89,7 +89,11 @@ public final class Expansion extends PlaceholderExpansion {
                 return plugin.phase().id();
             }
             case "date" -> {
-                // Jour de l'évènement (horloge du plugin, horloge de test comprise) en AAAAMMJJ, pour les conditions numériques
+                // Jour de l'évènement (horloge du plugin, horloge de test comprise) en AAAAMMJJ, pour les conditions
+                // numériques ; 0 avant le début des gains, pour que rien ne démarre entre minuit et l'ouverture
+                if (plugin.dates().connu("avent") && maintenant.isBefore(plugin.dates().get("avent"))) {
+                    return "0";
+                }
                 return plugin.horloge().aujourdhui().format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE);
             }
             case "phase_ligne" -> {
