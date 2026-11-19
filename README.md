@@ -23,8 +23,14 @@ Le moteur de Noël d'Opale. Tout tourne autour d'une horloge à l'heure de Paris
   par commandes (aucun appel à son API).
 - **Calendrier de l'Avent** (`/calendrier`) : 25 portes, 3 jours de rattrapage, temps de jeu minimal, 2 comptes par
   empreinte d'IP et par porte, paliers à 7, 14 et 21 portes, porte 25 spéciale, cadeau de bienvenue à la 1re porte.
-- **Grand Sapin** (`/sapin`) : jauge commune, offrandes de Flocons et contributions des sources, part comptée par jour,
-  paliers lancés une fois (contributeurs hors ligne servis à leur connexion), palier de la Veillée validé dès 90 %.
+- **Grand Sapin** (`/sapin`) : jauge commune qui se décore palier par palier (commandes serveur de chaque palier, par
+  exemple une structure de plus sur le sapin). Points en jouant (1 point pour N Flocons gagnés, sans rien coûter) et
+  offrandes (1 point par Flocon, plafond de Flocons offerts par jour). Rangs de contributeur (★, ★★, ★★★ par défaut)
+  qui multiplient le cadeau de chaque palier (`{fois:N}` = N × rang), donné selon le rang au moment du palier, hors
+  ligne à la connexion suivante. Relevé quotidien de la jauge, prévision pour la Veillée et coup de pouce (offrandes
+  comptées double) quand elle n'arrive pas à 100 %. Palier de la Veillée : part dès le seuil pendant sa fenêtre, sinon
+  ses commandes d'échec à la fin ; ensuite le sapin ne prend plus rien. Menu avec la jauge, à quoi il sert, le rang du
+  joueur, les meilleurs décorateurs, chaque palier (décor et cadeau du joueur) et les offrandes.
 - **Carte de Noël** (`/carte`) : 10 tampons (première visite du village, compteurs, niveau du clicker, commande) ;
   carte complète, une fois.
 - **Boutique** : achats appelés par les menus, limites par jour et au total, articles qui en demandent un autre,
@@ -76,7 +82,7 @@ par sous-commande, toutes sous `shchristmaspresents.admin` (op par défaut). Tou
 | `compteur <joueur> <id> [n]` | Compteur de la carte (pendant les gains) |
 | `tampon <joueur> <id>` | Tampon de la carte (pendant les gains) |
 | `acheter <joueur> <article>` | Achat dans la boutique |
-| `sapin info\|cible <points>\|ajouter <joueur> <points>\|veillee` | Grand Sapin |
+| `sapin info\|cible <points>\|ajouter <joueur> <points>\|veillee` | Grand Sapin (info : rangs, prévision, coup de pouce) |
 | `drop <zone> <secondes> <nombre>` | Pluie de cadeaux du ciel |
 | `horloge <AAAA-MM-JJTHH:MM\|reel>` | Horloge de test (`test.horloge-autorisee`) |
 | `bilan` | Bilan dans `bilan-<date>.yml` et en console |
@@ -97,6 +103,8 @@ par sous-commande, toutes sous `shchristmaspresents.admin` (op par défaut). Tou
 | `sapin_pourcent_affiche`, `sapin_palier_suivant_affiche` | « 37 % », « 50 % » (avec le signe : un « % » seul à côté d'un placeholder casse la lecture des suivants) |
 | `date` | Jour de l'évènement (horloge du plugin, horloge de test comprise) en AAAAMMJJ, pour les conditions numériques |
 | `sapin_contribution`, `sapin_contribution_jour`, `offert_jour`, `sapin_contributeurs` | Contributions |
+| `sapin_rang`, `sapin_rang_ligne`, `sapin_multiplicateur`, `sapin_rang_suivant_reste`, `sapin_place`, `sapin_offrande_reste` | Rang du joueur (étoiles, ligne prête, multiplicateur des cadeaux, points avant le rang suivant, place, Flocons encore offrables aujourd'hui) |
+| `sapin_palier_suivant_nom`, `sapin_palier_suivant_cadeau`, `sapin_etat_ligne`, `sapin_prevision`, `sapin_coup_de_pouce` | Prochain palier (décor, cadeau du joueur), ligne d'état prête (barre de boss), prévision pour la Veillée, coup de pouce en cours |
 | `sapin_top_<n>_nom`, `sapin_top_<n>_valeur` | Meilleurs contributeurs (1 à 10) |
 | `carte_tampons`, `carte_tampon_<id>`, `carte_complete`, `compteur_<id>` | Carte de Noël |
 | `article_<id>_ligne`, `_peut`, `_prix`, `_achats`, `_limite` | Boutique |

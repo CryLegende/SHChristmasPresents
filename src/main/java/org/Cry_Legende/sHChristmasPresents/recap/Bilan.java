@@ -202,6 +202,11 @@ public final class Bilan {
             }
         }
         y.set("sapin.paliers-atteints", paliers);
+        int[] rangs = sapin.parRang();
+        for (int k = 1; k < rangs.length; k++) {
+            y.set("sapin.rangs." + k, rangs[k]);
+        }
+        y.set("sapin.veillee-passee", sapin.veilleePassee());
 
         log.info("Bilan " + annee + " : " + d.joueurs().size() + " participants, " + Textes.nombre(gagnes) + " Flocons gagnés, "
                 + Textes.nombre(boutique + d.offert() + d.cadeaux()[1]) + " dépensés, médiane " + mediane);
@@ -212,7 +217,8 @@ public final class Bilan {
             log.info("  top " + (i + 1) + " : " + d.joueurs().get(i).pseudo() + " " + d.joueurs().get(i).flocons());
         }
         log.info("  présence : 1 j " + presence[0] + ", 2-4 j " + presence[1] + ", 5-9 j " + presence[2] + ", 10 j et + " + presence[3]);
-        log.info("  sapin : " + Textes.pourcent(sapin.pourcent()) + " %, " + sapin.contributeurs() + " contributeurs, paliers " + paliers);
+        log.info("  sapin : " + Textes.pourcent(sapin.pourcent()) + " %, " + sapin.contributeurs() + " contributeurs, paliers " + paliers
+                + ", rangs " + java.util.Arrays.toString(java.util.Arrays.copyOfRange(rangs, 1, rangs.length)));
         return y;
     }
 }

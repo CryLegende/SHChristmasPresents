@@ -105,9 +105,13 @@ public final class Flocons {
         portefeuille.donner(uuid, pseudo, verse);
         plugin.debug("Gain " + pseudo + " " + sourceId + " base " + montant + " versé " + verse + " (×" + Textes.facteur(facteur) + ")");
 
-        int points = source.pointsSapin(montant);
-        if (points > 0 && gains) {
-            plugin.sapin().contribuer(uuid, pseudo, points, true);
+        if (gains) {
+            // 1 point du sapin pour N Flocons versés (sapin.automatique), plus les points fixes d'une source (format 2.1)
+            plugin.sapin().automatique(uuid, pseudo, verse, sourceId);
+            int points = source.pointsSapin(montant);
+            if (points > 0) {
+                plugin.sapin().contribuer(uuid, pseudo, points, false);
+            }
         }
         Player enLigne = Bukkit.getPlayer(uuid);
         if (enLigne != null && verse > 0) {

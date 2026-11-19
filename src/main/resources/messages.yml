@@ -165,50 +165,261 @@ calendrier:
 
 sapin:
   ferme: "&7&l« &e&lSH &8&l» &7Le Grand Sapin n'accepte pas d'offrande en ce moment."
+  ferme-veillee: "&7&l« &e&lSH &8&l» &7Le Grand Sapin a brillé pour la Veillée, merci à tous ! Garde tes Flocons pour la boutique."
   usage: "&7&l« &e&lSH &8&l» &7Pour offrir des Flocons, tape &e/sapin offrir <nombre>&7."
-  part-complete: "&7&l« &6&lSH &8&l» &7Ta part du jour est complète (&6{plafond} ❄&7), reviens demain."
+  part-complete: "&7&l« &6&lSH &8&l» &7Tu as déjà offert &6{plafond} ❄ &7aujourd'hui, le maximum. Reviens demain !"
   manque: "&7&l« &c&lSH &8&l» &7Il te manque &c{manque} ❄&7."
-  offert: "&7&l« &a&lSH &8&l» &7Merci ! &b{montant} ❄ &7offerts au Grand Sapin, qui est à &a{pourcent} %&7."
-  offert-partiel: "&7&l« &a&lSH &8&l» &7Merci ! &b{montant} ❄ &7offerts, ta part du jour est complète. Le Grand Sapin est à &a{pourcent} %&7."
+  offert: "&7&l« &a&lSH &8&l» &7Merci ! &b{montant} ❄ &7offerts, &a+{points} points&7. Le Grand Sapin est à &a{pourcent} %&7."
+  offert-pouce: "&7&l« &a&lSH &8&l» &7Merci ! &b{montant} ❄ &7offerts, &a+{points} points &7avec le coup de pouce. Le Grand Sapin est à &a{pourcent} %&7."
+  offert-complet: "&7&l« &a&lSH &8&l» &7Merci ! &b{montant} ❄ &7offerts, &a+{points} points &7pour ton rang. Le sapin est complet, rendez-vous à la Veillée !"
+  offert-partiel: "&7&l« &6&lSH &8&l» &7Tu as atteint les &6{plafond} ❄ &7du jour, le reste est resté dans ta poche."
+  rang-atteint: "&7&l« &a&lSH &8&l» &7Tu passes &eContributeur {rang} &7! Tes cadeaux de palier sont &ax{multiplicateur}&7. Encore &f{reste} &7points pour &e{suivant}&7."
+  rang-max: "&7&l« &a&lSH &8&l» &7Tu passes &eContributeur {rang} &7! Tes cadeaux de palier sont &ax{multiplicateur} &7et le titre &eVeillée 2026 étoilé &7t'attend à la Veillée."
+  palier-recu: "&7&l« &a&lSH &8&l» &7Palier &a{palier} % &7du Grand Sapin, {nom} ! Tu reçois &f{cadeau} &7en Contributeur {rang}."
+  # Étoiles de chaque rang (Contributeur ★, ★★, ★★★).
+  rangs:
+    "1": "★"
+    "2": "★★"
+    "3": "★★★"
+  # Chaque palier : nom du décor (il suit « Palier N % du Grand Sapin, »), description du menu, cadeau de chaque
+  # contributeur (liste : une ligne par rang ; texte seul : {fois:N} = N × rang).
+  paliers:
+    "20":
+      nom: "les boules rouges sont posées"
+      description:
+        - "&7Les boules rouges arrivent sur le sapin."
+      cadeau: "{fois:20} ❄"
+    "30":
+      nom: "la guirlande du bas s'allume"
+      description:
+        - "&7La guirlande du bas s'allume."
+      cadeau:
+        - "1 clé ordinaire"
+        - "2 clés ordinaires"
+        - "3 clés ordinaires"
+    "40":
+      nom: "les boules dorées sont posées"
+      description:
+        - "&7Les boules dorées arrivent sur le sapin."
+      cadeau:
+        - "1 LuckyBlock"
+        - "2 LuckyBlocks"
+        - "3 LuckyBlocks"
+    "50":
+      nom: "la guirlande du haut s'allume"
+      description:
+        - "&7La guirlande du haut s'allume et tout"
+        - "&7le serveur gagne des Flocons ×2"
+        - "&7pendant une heure."
+      cadeau: "{fois:40} ❄"
+    "60":
+      nom: "les cadeaux arrivent au pied du sapin"
+      description:
+        - "&7Les cadeaux arrivent au pied du sapin"
+        - "&7et il en pleut sur le monde de Noël."
+      cadeau:
+        - "1 clé ordinaire"
+        - "2 clés ordinaires"
+        - "3 clés ordinaires"
+    "70":
+      nom: "les lanternes s'accrochent aux branches"
+      description:
+        - "&7Des lanternes s'accrochent aux branches."
+      cadeau:
+        - "1 750 EXP"
+        - "3 500 EXP"
+        - "5 250 EXP"
+    "80":
+      nom: "les boules de givre sont posées"
+      description:
+        - "&7Les boules de givre complètent le sapin."
+      cadeau: "{fois:60} ❄"
+    "90":
+      nom: "l'étoile monte au sommet"
+      description:
+        - "&7L'étoile dorée monte au sommet,"
+        - "&7encore éteinte."
+      cadeau:
+        - "1 clé de Noël"
+        - "2 clés de Noël"
+        - "3 clés de Noël"
+    "100":
+      nom: "l'étoile s'allume pour la Veillée"
+      description:
+        - "&7Le 24 décembre à 20 h 30, l'étoile"
+        - "&7s'allume et le feu d'artifice part."
+      cadeau:
+        - "le titre Veillée 2026"
+        - "le titre Veillée 2026"
+        - "le titre Veillée 2026 et sa version étoilée"
   menu:
     titre: "&8&lNoël &8| Grand Sapin"
     barre-pleine: "&a|"
     barre-vide: "&8|"
     jauge:
-      nom: "&2&lGrand Sapin"
+      nom: "&2&lLe Grand Sapin &8• &a{pourcent} %"
       lore:
         - "{barre} &a{pourcent} %"
         - ""
-        - "&7Prochain palier à &e{suivant} %"
-        - "&f{contributeurs} &7contributeurs"
-      lore-fini:
-        - "{barre} &a{pourcent} %"
+        - "&7Décoré par &f{contributeurs} &7contributeurs."
+      suivant:
         - ""
-        - "&7Tous les paliers sont atteints !"
-        - "&f{contributeurs} &7contributeurs"
-    contribution:
-      nom: "&eTa contribution"
+        - "&7Au palier &e{palier} %&7, {nom}."
+        - "&7Il manque &f{manque} &7points."
+      complet:
+        - ""
+        - "&aLe sapin est complet ! Rendez-vous"
+        - "&aà la Veillée, le 24 décembre à 20 h 30."
+      veillee:
+        - ""
+        - "&7La Veillée demande &e{seuil} %&7, il"
+        - "&7manque &f{manque} &7points."
+      veillee-en-cours:
+        - ""
+        - "&6La Veillée a commencé ! Il manque"
+        - "&f{manque} &6points pour &e{seuil} %&6, jusqu'à &f{jusqua}&6."
+      veillee-passee:
+        - ""
+        - "&aLe Grand Sapin a brillé pour la Veillée."
+        - "&aMerci à tous !"
+      prevision:
+        - "&7Au rythme actuel, il sera à &f{prevision} %"
+        - "&7le 24 au soir."
+      prevision-complet:
+        - "&7Au rythme actuel, il sera complet"
+        - "&7avant la Veillée."
+      pouce:
+        - ""
+        - "&6&lCoup de pouce &6! Tes offrandes"
+        - "&6comptent ×{facteur} jusqu'au {fin}."
+    explication:
+      nom: "&e&lÀ quoi sert le Grand Sapin ?"
       lore:
-        - "&f{total} &7points au total"
-        - "&f{jour}&7/{plafond} aujourd'hui"
+        - "&7Tout le serveur décore ensemble le"
+        - "&7sapin du spawn. Chaque palier y pose"
+        - "&7de nouvelles décorations et fait un"
+        - "&7cadeau à chaque contributeur."
         - ""
-        - "&7Encore quelques points pour"
-        - "&7devenir contributeur."
-      lore-contributeur:
-        - "&f{total} &7points au total"
-        - "&f{jour}&7/{plafond} aujourd'hui"
+        - "&7Il grandit tout seul quand tu joues,"
+        - "&7&f1 point pour {flocons-par-point} ❄ gagnés&7, et bien plus"
+        - "&7vite avec tes offrandes, &f1 point par ❄&7."
         - ""
-        - "&aTu es contributeur !"
-    offrande:
-      nom: "&bOffrir {montant} ❄"
+        - "&7Tes points font ton rang, &e★ &7dès"
+        - "&7{min} points. Plus ton rang est haut,"
+        - "&7plus tes cadeaux de palier sont gros."
+        - ""
+        - "&7À &e{seuil} % &7le soir de la Veillée,"
+        - "&7chaque contributeur reçoit le titre"
+        - "&eVeillée 2026&7."
+    rang:
+      nom: "&e&lContributeur {rang}"
+      nom-aucun: "&7&lPas encore contributeur"
+      aucun:
+        - "&f{total}&7/{min} points"
+        - ""
+        - "&7Encore &f{reste} &7points pour devenir"
+        - "&eContributeur ★ &7et recevoir les"
+        - "&7cadeaux des paliers."
+        - ""
       lore:
-        - "&7+{montant} points pour la jauge"
+        - "&f{total} &7points, dont &b{offert} ❄ &7offerts"
+        - "&f{place}&7e sur {contributeurs} contributeurs"
         - ""
-        - "&b» Clic pour offrir"
+        - "&7Tes cadeaux de palier sont &ax{multiplicateur}&7."
+        - ""
+      suivant:
+        - "&7Encore &f{reste} &7points pour &e{suivant}&7,"
+        - "&7et tes cadeaux passent &ax{multiplicateur}&7."
+        - ""
+      suivant-max:
+        - "&7Encore &f{reste} &7points pour &e{suivant}&7,"
+        - "&7tes cadeaux passent &ax{multiplicateur} &7et tu auras"
+        - "&7le titre &eVeillée 2026 étoilé&7."
+        - ""
+      max:
+        - "&aRang maximum ! Le titre &eVeillée 2026"
+        - "&eétoilé &at'attend si le sapin brille"
+        - "&apour la Veillée."
+        - ""
+      seuils:
+        - "&8★ {r1} points · ★★ {r2} · ★★★ {r3}"
     top:
-      nom: "&6Meilleurs contributeurs"
-      ligne: "&7{rang}. &f{nom} &8- &e{valeur}"
-      vide: "&8Personne pour l'instant"
+      nom: "&6&lLes meilleurs décorateurs"
+      ligne: "&e{rang}. &f{nom} &8{etoiles} &7{valeur} points"
+      vide:
+        - "&8Personne pour l'instant"
+      pied:
+        - ""
+        - "&7Les trois premiers sont cités"
+        - "&7à la Veillée."
+    palier:
+      nom-fait: "&a✔ Palier {palier} %"
+      nom-prochain: "&e➜ Palier {palier} %"
+      nom-avenir: "&7Palier {palier} %"
+      cadeau:
+        - ""
+        - "&7Chaque contributeur reçoit &f{cadeau}&7."
+      cadeau-toi:
+        - "&7Toi, Contributeur {rang}, tu reçois &a{cadeau}&7."
+      cadeau-toi-1:
+        - "&7Monte de rang pour le doubler."
+      cadeau-pas-contributeur:
+        - "&8Deviens contributeur pour le recevoir."
+      fait:
+        - ""
+        - "&aAtteint !"
+      prochain:
+        - ""
+        - "&eProchain palier, il manque &f{manque} &epoints."
+      avenir:
+        - ""
+        - "&7Il manque &f{manque} &7points."
+      veillee-fait:
+        - ""
+        - "&aLe sapin a brillé pour la Veillée !"
+      veillee-prochain:
+        - ""
+        - "&eLe 24 décembre à 20 h 30, si le sapin"
+        - "&eest à {seuil} % ou plus."
+      veillee-avenir:
+        - ""
+        - "&7Le 24 décembre à 20 h 30, si le sapin"
+        - "&7est à {seuil} % ou plus."
+    offrande:
+      nom: "&b&lOffrir {montant} ❄"
+      lore:
+        - "&f+{points} points &7pour le sapin"
+        - "&7et pour ton rang."
+      lore-pouce:
+        - "&f+{points} points &7avec le coup de pouce,"
+        - "&7pour le sapin et pour ton rang."
+      lore-complet:
+        - "&7Le sapin est complet, &f+{points} points"
+        - "&7pour ton rang avant la Veillée."
+      clic:
+        - ""
+        - "&7&o(( &b&oCliquez pour offrir &7&o))"
+      ferme:
+        - "&7Le sapin n'accepte pas d'offrande"
+        - "&7en ce moment."
+      part-complete:
+        - "&7Tu as déjà offert &6{plafond} ❄"
+        - "&7aujourd'hui. Reviens demain !"
+    jour:
+      nom: "&e&lAujourd'hui"
+      lore:
+        - "&b{offert}&7/{plafond} ❄ offerts, encore"
+        - "&b{reste} ❄ &7possibles aujourd'hui."
+        - ""
+        - "&f+{points} points &7aujourd'hui, en comptant"
+        - "&71 point pour {flocons-par-point} ❄ gagnés en jouant."
+      pouce:
+        - ""
+        - "&6Coup de pouce ! Tes offrandes"
+        - "&6comptent ×{facteur}."
+    retour:
+      nom: "&c⤾ Retour &7(Clic)"
+      lore: ""
 
 # ---------------------------------------------------------------- carte de Noël
 
@@ -374,7 +585,7 @@ recap:
   donne: "&7&l« &a&lSH &8&l» &7Ton livre &aMon Noël {annee} &7est dans ton inventaire."
   titre: "Mon Noël {annee}"
   auteur: "SkyHand"
-  rang: "&0Contributeur &2n°{rang}"
+  rang: "&0Contributeur &2{etoiles} &8(n°{place})"
   sans-rang: "&8Pas contributeur cette année"
   # Une entrée par page, \n pour un retour à la ligne.
   pages:
@@ -384,6 +595,19 @@ recap:
 # ---------------------------------------------------------------- placeholders
 
 placeholders:
+  # %shchristmaspresents_sapin_etat_ligne% (barre de boss, hologramme)
+  sapin-etat:
+    suivant: "&7au palier &f{palier} %&7, {nom}"
+    veillee: "&7la Veillée demande &f{seuil} %"
+    complet: "&acomplet, rendez-vous à la Veillée"
+    pouce: "&6coup de pouce, offrandes ×{facteur}"
+    passee: "&aa brillé pour la Veillée"
+    ferme: ""
+  # %shchristmaspresents_sapin_rang_ligne% (scoreboard)
+  sapin-rang:
+    aucun: "&7{points} points, encore &f{reste} &7pour &e★"
+    rang: "&eContributeur {rang} &7({points} points)"
+
   # %shchristmaspresents_porte_ligne%
   porte-ligne:
     avant: "&7La case n°1 s'ouvre le {date}"
@@ -437,7 +661,7 @@ admin:
   acheter-usage: "&7&l« &e&lSH &8&l» &7Tape &e/shchristmaspresents acheter <joueur> <article>"
   article-inconnu: "&7&l« &c&lSH &8&l» &7L'article &c{article} &7n'existe pas."
   sapin-usage: "&7&l« &e&lSH &8&l» &7Tape &e/shchristmaspresents sapin <info|cible <points>|ajouter <joueur> <points>|veillee>"
-  sapin-info: "&7&l« &e&lSH &8&l» &7Grand Sapin à &a{pourcent} % &7(&f{points} &7points, cible &f{cible} &7{origine}, départ &f{depart} %&7), &f{contributeurs} &7contributeurs, paliers atteints &f{paliers}&7."
+  sapin-info: "&7&l« &e&lSH &8&l» &7Grand Sapin à &a{pourcent} % &7(&f{points} &7points, cible &f{cible} &7{origine}, départ &f{depart} %&7), &f{contributeurs} &7contributeurs ({rangs}), paliers atteints &f{paliers}&7, prévision &f{prevision}&7, coup de pouce &f{pouce}&7, Veillée &f{veillee}&7."
   sapin-cible-config: "de config.yml"
   sapin-cible-commande: "réglée par commande"
   sapin-ajoute: "&7&l« &a&lSH &8&l» &f{points} &7points ajoutés à &a{joueur}&7, sapin à &a{pourcent} %&7."
@@ -456,3 +680,5 @@ admin:
   bilan-fait: "&7&l« &a&lSH &8&l» &7Bilan écrit dans &a{fichier} &7(et en console)."
   tous-usage: "&7&l« &e&lSH &8&l» &7Tape &e/shchristmaspresents tous [monde] <commande avec {joueur}>"
   tous-fait: "&7&l« &a&lSH &8&l» &7Commande lancée pour &a{n} &7joueur(s)."
+  sapin-veillee-passee: "passée"
+

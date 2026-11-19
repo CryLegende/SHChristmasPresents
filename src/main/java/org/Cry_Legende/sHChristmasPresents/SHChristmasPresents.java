@@ -71,7 +71,7 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * SHChristmasPresents 2.0 : le moteur de l'évènement de Noël d'Opale. Toutes les données de l'année sont en mémoire
+ * SHChristmasPresents 2.2 : le moteur de l'évènement de Noël d'Opale. Toutes les données de l'année sont en mémoire
  * (lues au démarrage) et écrites en base en file ; tout ce qui les change tourne sur le fil principal, où les
  * commandes et les événements des mondes (DivineMC, mondes en parallèle) sont renvoyés.
  */
@@ -203,12 +203,7 @@ public final class SHChristmasPresents extends JavaPlugin {
         flocons = new Flocons(this, comptes, new Multiplicateurs(etat, horloge, fenetres, profils), new Portefeuille(this));
         appliquerReglages();
 
-        livraisons.type("sapin-palier", (joueur, ref) -> {
-            Sapin.Palier palier = sapin.palier(ref);
-            if (palier != null) {
-                sapin.recompenser(joueur, palier);
-            }
-        });
+        livraisons.type("sapin-palier", sapin::livrer);
         connexions = new Connexions(this);
         listeCommandes = new ListeCommandes(this);
         for (Listener l : List.of(new MenusListener(this::sync), new ObjetsMarques(this), connexions, cadeaux, petitsCadeaux,
@@ -326,11 +321,12 @@ public final class SHChristmasPresents extends JavaPlugin {
         clicker.configurer();
     }
 
-    /** Toutes les 5 secondes : actions datées, médianes des fenêtres, première visite du village. */
+    /** Toutes les 5 secondes : actions datées, médianes des fenêtres, relevés et coup de pouce du sapin, première visite du village. */
     private void tic() {
         ZonedDateTime maintenant = horloge.maintenant();
         actions.verifier();
         fenetres.verifier(maintenant);
+        sapin.tic(maintenant);
         listeCommandes.verifier();
         if (dates.phase(maintenant) == Phase.VILLAGE) {
             for (Player joueur : Bukkit.getOnlinePlayers()) {

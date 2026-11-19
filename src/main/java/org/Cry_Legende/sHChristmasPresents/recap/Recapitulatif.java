@@ -57,14 +57,16 @@ public final class Recapitulatif {
     public ItemStack livre(Player joueur) {
         UUID uuid = joueur.getUniqueId();
         var m = plugin.messages();
-        int rang = plugin.sapin().rang(uuid);
+        int place = plugin.sapin().place(uuid);
+        int niveau = plugin.sapin().niveau(uuid);
         Object[] r = {"{pseudo}", joueur.getName(), "{annee}", plugin.annee(),
                 "{portes}", plugin.calendrier().ouvertes(uuid), "{portes-total}", plugin.calendrier().nombre(),
                 "{tampons}", plugin.carte().nombre(uuid), "{tampons-total}", plugin.carte().tampons().size(),
                 "{flocons}", Textes.nombre(plugin.flocons().comptes().total(uuid)),
                 "{cadeaux}", plugin.compteurs().valeur(uuid, "cadeaux-envoyes"),
                 "{sapin}", Textes.nombre(plugin.sapin().contribution(uuid)),
-                "{rang}", rang > 0 ? m.brut("recap.rang", "{rang}", rang) : m.brut("recap.sans-rang"),
+                "{rang}", place > 0 ? m.brut("recap.rang", "{rang}", place, "{place}", place, "{etoiles}", plugin.sapin().etoiles(niveau))
+                        : m.brut("recap.sans-rang"),
                 "{contributeurs}", plugin.sapin().contributeurs()};
         ItemStack livre = new ItemStack(Material.WRITTEN_BOOK);
         BookMeta meta = (BookMeta) livre.getItemMeta();

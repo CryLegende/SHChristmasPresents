@@ -130,6 +130,20 @@ public final class Expansion extends PlaceholderExpansion {
             case "sapin_contributeurs" -> {
                 return Integer.toString(sapin.contributeurs());
             }
+            case "sapin_palier_suivant_nom" -> {
+                Sapin.Palier suivant = sapin.prochain();
+                return suivant == null ? "" : sapin.nomPalier(suivant);
+            }
+            case "sapin_prevision" -> {
+                Double prevision = sapin.pouce().prevision(maintenant);
+                return prevision == null ? "" : Integer.toString((int) Math.floor(Math.min(100, prevision)));
+            }
+            case "sapin_coup_de_pouce" -> {
+                return bool(sapin.ouvert() && sapin.pouce().actif());
+            }
+            case "sapin_etat_ligne" -> {
+                return etatSapin(sapin);
+            }
             default -> {
             }
         }
@@ -200,6 +214,36 @@ public final class Expansion extends PlaceholderExpansion {
             case "sapin_contribution_jour" -> {
                 return Integer.toString(sapin.contributionJour(uuid, jour));
             }
+            case "sapin_rang" -> {
+                return sapin.etoiles(sapin.niveau(uuid));
+            }
+            case "sapin_rang_ligne" -> {
+                int niveau = sapin.niveau(uuid);
+                long total = sapin.contribution(uuid);
+                return niveau <= 0
+                        ? plugin.messages().brut("placeholders.sapin-rang.aucun", "{points}", Textes.nombre(total),
+                        "{reste}", Textes.nombre(Math.max(0, sapin.seuil(1) - total)))
+                        : plugin.messages().brut("placeholders.sapin-rang.rang", "{rang}", sapin.etoiles(niveau),
+                        "{points}", Textes.nombre(total));
+            }
+            case "sapin_multiplicateur" -> {
+                return Integer.toString(sapin.niveau(uuid));
+            }
+            case "sapin_rang_suivant_reste" -> {
+                int niveau = sapin.niveau(uuid);
+                return niveau >= sapin.rangMax() ? "" : Long.toString(Math.max(0, sapin.seuil(niveau + 1) - sapin.contribution(uuid)));
+            }
+            case "sapin_place" -> {
+                return Integer.toString(sapin.place(uuid));
+            }
+            case "sapin_offrande_reste" -> {
+                int reste = sapin.resteOffrandeJour(uuid, jour);
+                return Integer.toString(reste == Integer.MAX_VALUE ? 0 : reste);
+            }
+            case "sapin_palier_suivant_cadeau" -> {
+                Sapin.Palier suivant = sapin.prochain();
+                return suivant == null ? "" : sapin.cadeauPalier(suivant, Math.max(1, sapin.niveau(uuid)));
+            }
             case "carte_tampons" -> {
                 return Integer.toString(plugin.carte().nombre(uuid));
             }
@@ -244,6 +288,28 @@ public final class Expansion extends PlaceholderExpansion {
             return article(joueur, p.substring("article_".length()));
         }
         return null;
+    }
+
+    /** Une ligne sur le sapin (messages.yml placeholders.sapin-etat) : prochain palier, coup de pouce, complet, Veillée. */
+    private String etatSapin(Sapin sapin) {
+        var m = plugin.messages();
+        if (sapin.veilleePassee()) {
+            return m.brut("placeholders.sapin-etat.passee");
+        }
+        if (!sapin.ouvert()) {
+            return m.brut("placeholders.sapin-etat.ferme");
+        }
+        if (sapin.pouce().actif()) {
+            return m.brut("placeholders.sapin-etat.pouce", "{facteur}", Textes.facteur(sapin.pouce().facteurConfig()));
+        }
+        Sapin.Palier suivant = sapin.prochain();
+        if (sapin.complet() || suivant == null) {
+            return m.brut("placeholders.sapin-etat.complet");
+        }
+        if (suivant.veillee()) {
+            return m.brut("placeholders.sapin-etat.veillee", "{seuil}", Textes.facteur(sapin.seuilVeillee()));
+        }
+        return m.brut("placeholders.sapin-etat.suivant", "{palier}", suivant.pourcent(), "{nom}", sapin.nomPalier(suivant));
     }
 
     private String article(OfflinePlayer joueur, String reste) {

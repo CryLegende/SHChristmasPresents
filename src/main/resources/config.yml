@@ -291,61 +291,162 @@ calendrier:
         materiau: CHEST
 
 sapin:
-  # Points pour 100 % (sapin cible <points> la remplace sans toucher au fichier).
-  cible: 40000
-  # La jauge démarre à ce pourcentage : pourcent = depart-pourcent + 100 × points / cible.
+  # Points qui font 100 % de la jauge (sapin cible <points> la remplace sans toucher au fichier). La jauge part de
+  # depart-pourcent : pourcent = depart-pourcent + 100 × points / cible, il faut donc 85 500 points pour la remplir.
+  # Réglée le 19 novembre sur les joueurs du 12 au 18 novembre plus 20 % (campagnes de pub) : complet vers le 21-22
+  # décembre ; avec les joueurs d'aujourd'hui, autour de 94 % le 24 (_audit-20261119-noel-sapin/modele_sapin.py).
+  cible: 95000
   depart-pourcent: 10
-  # Points comptés par joueur et par jour (offrandes et contributions des sources).
-  plafond-joueur-jour: 600
-  # Points sur l'évènement pour être contributeur (commandes-contributeur des paliers).
-  contribution-min: 50
-  # Jauge minimale pour le palier marqué veillee (sapin veillee).
-  seuil-veillee: 90
-  # Boutons d'offrande du menu /sapin.
+  # Points en jouant : 1 point pour flocons-par-point Flocons gagnés (après multiplicateurs), sans rien coûter au joueur.
+  # Sources exclues : Flocons rendus par le sapin lui-même, cadeaux entre joueurs, gestes d'admin.
+  automatique:
+    flocons-par-point: 5
+    sources-exclues:
+      - sapin-palier
+      - cadeau-recu
+      - admin
+  # Offrandes (/sapin) : 1 point par Flocon offert (× coup de pouce), au plus plafond-jour Flocons par joueur et par jour.
   offrandes:
-    - 10
-    - 50
-    - 100
-    - 500
-  # Chaque palier part une fois : commandes-serveur, puis commandes-contributeur pour chaque contributeur (en ligne :
-  # tout de suite ; hors ligne : à sa connexion suivante). veillee: true = seulement par sapin veillee.
+    plafond-jour: 500
+    boutons:
+      - 10
+      - 50
+      - 100
+      - 500
+  # Rangs de contributeur (points de l'évènement). Le rang multiplie le cadeau de chaque palier : {fois:N} vaut N × rang
+  # dans les commandes (et dans les textes de messages.yml). Rang 1 = contributeur.
+  rangs:
+    "1": 50
+    "2": 1000
+    "3": 3000
+  # Veillée : le palier marqué veillee part dès seuil-veillee %, de la date veillee (dates:) jusqu'à veillee-jusqua.
+  # sapin veillee (action de 20 h 30) le lance si la jauge y est, sinon envoie commandes-attente-veillee ; à
+  # veillee-jusqua, s'il n'est pas parti, ses commandes-echec partent. Ensuite le sapin ne prend plus rien.
+  seuil-veillee: 90
+  veillee-jusqua: "2026-12-24T23:59"
+  commandes-attente-veillee:
+    - 'tm broadcast &2&lLa Veillée attend le sapin\n&fIl est à {pourcent} %, il en faut {seuil} avant {jusqua} • /sapin'
+    - 'sbc &2&lLa Veillée attend le Grand Sapin\n&fIl manque {manque} points pour {seuil} %, vous avez jusqu''à {jusqua} • [/sapin]'
+  # Coup de pouce : chaque jour à partir de du, à heure, si au rythme des trois derniers jours le sapin n'arrive pas à
+  # 100 % pour la Veillée, chaque Flocon offert compte facteur fois jusqu'au lendemain même heure.
+  coup-de-pouce:
+    du: "2026-12-18"
+    heure: "18:00"
+    facteur: 2
+    commandes-debut:
+      - 'tm broadcast &2&lLe Grand Sapin a besoin d''aide\n&fTes offrandes comptent double jusqu''à demain {jusqua} • /sapin'
+      - 'sbc &2&lCoup de pouce au Grand Sapin\n&fAu rythme actuel il finirait à {prevision} %, tes offrandes comptent double jusqu''à demain {jusqua} • [/sapin]'
+    commandes-suite:
+      - 'sbc &2&lCoup de pouce au Grand Sapin\n&fEncore un jour, tes offrandes comptent double jusqu''à demain {jusqua} • [/sapin]'
+    commandes-fin:
+      - 'sbc &2&lGrand Sapin\n&fIl est en route pour la Veillée, le coup de pouce s''arrête • [/sapin]'
+  # Chaque palier part une fois : commandes-serveur (décor du sapin, annonce), puis commandes-contributeur pour chaque
+  # contributeur, selon son rang à ce moment ({fois:N} = N × rang ; hors ligne : à sa connexion suivante), et
+  # commandes-rang en plus à partir d'un rang. Nom, description et cadeau affichés : messages.yml, sapin.paliers.
   paliers:
-    "25":
+    "20":
+      icone:
+        materiau: PLAYER_HEAD
+        tete: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMmJjNjViNjU5ZWFmYTM3ZGY2YzRiMTFkZGU4OTA3M2RiNzFhNWY1YjIyNTEzODgyMDEzZTEwMWZlNDY2Mzk5In19fQ=="
       commandes-serveur:
-        - "say Le Grand Sapin est à 25 % !"
-        - "shchristmaspresents multiplicateur 2 60"
+        - 'function noel2026:sapin/p20'
+        - 'sbc &2&lGrand Sapin 20 %\n&fLes boules rouges sont posées, un cadeau pour chaque contributeur • [/sapin]'
       commandes-contributeur:
-        - "shchristmaspresents flocons {joueur} 100 sapin-palier"
+        - 'shchristmaspresents flocons {joueur} {fois:20} sapin-palier'
+    "30":
+      icone:
+        materiau: SHROOMLIGHT
+      commandes-serveur:
+        - 'function noel2026:sapin/p30'
+        - 'sbc &2&lGrand Sapin 30 %\n&fLa guirlande du bas s''allume, un cadeau pour chaque contributeur • [/sapin]'
+      commandes-contributeur:
+        - 'shcrates givekey {joueur} ordinaire {fois:1} p'
+    "40":
+      icone:
+        materiau: PLAYER_HEAD
+        tete: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOTRlYmJiNDBjNDZmNzc5OWM0YjA2OTZjZGVlNmE1YzVjYjQ0NTAxYzkzYTAwODc2MmZmOWMwZWQxMjQzMjc5MyJ9fX0="
+      commandes-serveur:
+        - 'function noel2026:sapin/p40'
+        - 'sbc &2&lGrand Sapin 40 %\n&fLes boules dorées sont posées, un cadeau pour chaque contributeur • [/sapin]'
+      commandes-contributeur:
+        - 'ntdluckyblock give {joueur} YELLOW {fois:1}'
     "50":
+      icone:
+        materiau: OCHRE_FROGLIGHT
       commandes-serveur:
-        - "say Le Grand Sapin est à 50 % !"
+        - 'function noel2026:sapin/p50'
+        - 'shchristmaspresents multiplicateur 2 60'
+        - 'tm broadcast &2&lGrand Sapin 50 %\n&fLa guirlande du haut s''allume, Flocons ×2 pendant 1 h • /sapin'
+        - 'sbc &2&lGrand Sapin 50 %\n&fLa guirlande du haut s''allume, Flocons ×2 pendant 1 h pour tout le serveur • [/sapin]'
       commandes-contributeur:
-        - "shchristmaspresents flocons {joueur} 100 sapin-palier"
-    "75":
+        - 'shchristmaspresents flocons {joueur} {fois:40} sapin-palier'
+    "60":
+      icone:
+        materiau: PLAYER_HEAD
+        tete: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzViNzkyOTU0NGY5NTU2MmJjZmZkNTgyYWFjNzllYTQ1ZWQzYWU0Y2YyZTM0OTJmMzcwZmY4YWYxMWRjNmYifX19"
       commandes-serveur:
-        - "say Le Grand Sapin est à 75 % !"
+        - 'function noel2026:sapin/p60'
+        - 'shchristmaspresents drop village 180 50'
+        - 'sbc &2&lGrand Sapin 60 %\n&fLes cadeaux arrivent au pied du sapin et il en pleut sur le monde de Noël • [/warp christmas]'
       commandes-contributeur:
-        - "shchristmaspresents flocons {joueur} 100 sapin-palier"
+        - 'shcrates givekey {joueur} ordinaire {fois:1} p'
+    "70":
+      icone:
+        materiau: LANTERN
+      commandes-serveur:
+        - 'function noel2026:sapin/p70'
+        - 'sbc &2&lGrand Sapin 70 %\n&fLes lanternes s''accrochent aux branches, un cadeau pour chaque contributeur • [/sapin]'
+      commandes-contributeur:
+        - 'shwithdraw givexpbottle {joueur} 1750 {fois:1}'
+    "80":
+      icone:
+        materiau: PLAYER_HEAD
+        tete: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOWIwMWI2YzE4NjY0MThmYjJhZjkxZTg0YWRlODZlOGY3ZGFiYWQxYzZiNjU3YmJmZmU5NGY5YTEwZDgxOGNjMSJ9fX0="
+      commandes-serveur:
+        - 'function noel2026:sapin/p80'
+        - 'sbc &2&lGrand Sapin 80 %\n&fLes boules de givre sont posées, un cadeau pour chaque contributeur • [/sapin]'
+      commandes-contributeur:
+        - 'shchristmaspresents flocons {joueur} {fois:60} sapin-palier'
+    "90":
+      icone:
+        materiau: GOLD_BLOCK
+      commandes-serveur:
+        - 'function noel2026:sapin/p90'
+        - 'tm broadcast &2&lGrand Sapin 90 %\n&fL''étoile monte au sommet, une clé de Noël par contributeur • /sapin'
+        - 'sbc &2&lGrand Sapin 90 %\n&fL''étoile monte au sommet, prêt pour la Veillée du 24 à 20 h 30 • [/sapin]'
+      commandes-contributeur:
+        - 'shcrates givekey {joueur} noel {fois:1} p'
     "100":
       veillee: true
+      icone:
+        materiau: NETHER_STAR
       commandes-serveur:
-        - "say Le Grand Sapin brille de mille feux !"
+        - 'function noel2026:sapin/p100'
+        - 'tm broadcast &2&lLe Grand Sapin brille\n&fTitre Veillée 2026 pour ses {contributeurs} contributeurs • /titres'
+        - 'sbc &2&lMerci aux décorateurs du Grand Sapin\n&fLes trois premiers sont &e{top1}&f, &e{top2} &fet &e{top3} • [/sapin]'
       commandes-contributeur:
-        - "give {joueur} nether_star 1"
+        - 'lp user {joueur} permission set tag.veillee2026 true'
+      commandes-rang:
+        "3":
+          - 'lp user {joueur} permission set tag.veillee2026_etoile true'
+      commandes-echec:
+        - 'tm broadcast &2&lLa Veillée\n&fLe Grand Sapin s''est arrêté à {pourcent} %, merci à tous • /spawn'
   menu:
-    lignes: 4
+    lignes: 5
     case-jauge: 4
-    case-contribution: 13
-    case-top: 31
-    cases-offrandes:
-      - 19
-      - 21
-      - 23
-      - 25
+    case-explication: 10
+    case-rang: 13
+    case-top: 16
+    cases-paliers: [18, 19, 20, 21, 22, 23, 24, 25, 26]
+    cases-offrandes: [28, 29, 33, 34]
+    case-jour: 31
+    case-retour: 40
+    # Commandes du joueur au clic sur Retour (le menu /noel de DeluxeMenus).
+    commandes-retour:
+      - noel
     cadre: BLACK_STAINED_GLASS_PANE
-    # Vitres de couleur à ces cases, avant le cadre (absent = aucune).
     accent: RED_STAINED_GLASS_PANE
-    cases-accent: [3, 5, 9, 17]
+    cases-accent: [3, 5, 11, 15, 39, 41]
 
 carte:
   # Monde du village : la première entrée pendant la phase village pose les tampons « auto: premiere-visite ».
