@@ -24,8 +24,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * Objets montrés par paquets (cadeaux, bonhommes de neige) : le serveur n'a aucune entité, chaque joueur proche reçoit
  * les siennes. Toutes les 10 ticks, chaque joueur reçoit les objets entrés dans leur portée et perd ceux qu'il a
  * quittés (8 blocs de marge) ; à chaque tick, les objets vus s'animent. Un joueur qui change de monde ou réapparaît
- * a tout oublié côté client : il reçoit tout à nouveau au balayage suivant. Fil principal, sauf les clics reçus du
- * réseau, renvoyés au fil principal.
+ * perd tous les objets (retirés chez lui, puis renvoyés au balayage suivant) : un client qui réapparaît dans le même
+ * monde garde ses entités, un objet oublié sans être retiré y resterait figé, même après sa disparition. Fil
+ * principal, sauf les clics reçus du réseau, renvoyés au fil principal.
  */
 public final class Scene implements Listener {
 
@@ -183,6 +184,17 @@ public final class Scene implements Listener {
         }
     }
 
+    /** Retire chez le joueur tout ce qu'il voit (retirer une entité que le client n'a plus ne coûte rien). */
+    private void toutCacher(Player joueur) {
+        if (!joueur.isOnline()) {
+            oublier(joueur.getUniqueId());
+            return;
+        }
+        for (Objet3D o : objets) {
+            o.cacher(joueur);
+        }
+    }
+
     @EventHandler(priority = EventPriority.MONITOR)
     public void onDepart(PlayerQuitEvent event) {
         UUID uuid = event.getPlayer().getUniqueId();
@@ -191,13 +203,13 @@ public final class Scene implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onMonde(PlayerChangedWorldEvent event) {
-        UUID uuid = event.getPlayer().getUniqueId();
-        Bukkit.getScheduler().runTask(plugin, () -> oublier(uuid));
+        Player joueur = event.getPlayer();
+        Bukkit.getScheduler().runTask(plugin, () -> toutCacher(joueur));
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onReapparition(PlayerRespawnEvent event) {
-        UUID uuid = event.getPlayer().getUniqueId();
-        Bukkit.getScheduler().runTask(plugin, () -> oublier(uuid));
+        Player joueur = event.getPlayer();
+        Bukkit.getScheduler().runTask(plugin, () -> toutCacher(joueur));
     }
 }
