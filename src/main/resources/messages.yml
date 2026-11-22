@@ -174,7 +174,7 @@ sapin:
   offert-complet: "&7&l« &a&lSH &8&l» &7Merci ! &b{montant} ❄ &7offerts, &a+{points} points &7pour ton rang. Le sapin est complet, rendez-vous à la Veillée !"
   offert-partiel: "&7&l« &6&lSH &8&l» &7Tu as atteint les &6{plafond} ❄ &7du jour, le reste est resté dans ta poche."
   rang-atteint: "&7&l« &a&lSH &8&l» &7Tu passes &eContributeur {rang} &7! Tes cadeaux de palier sont &ax{multiplicateur}&7. Encore &f{reste} &7points pour &e{suivant}&7."
-  rang-max: "&7&l« &a&lSH &8&l» &7Tu passes &eContributeur {rang} &7! Tes cadeaux de palier sont &ax{multiplicateur} &7et le titre &eVeillée 2026 étoilé &7t'attend à la Veillée."
+  rang-max: "&7&l« &a&lSH &8&l» &7Tu passes &eContributeur {rang} &7! Tes cadeaux de palier sont &ax{multiplicateur} &7et le titre &eVeillée étoilé &7t'attend à la Veillée."
   palier-recu: "&7&l« &a&lSH &8&l» &7Palier &a{palier} % &7du Grand Sapin, {nom} ! Tu reçois &f{cadeau} &7en Contributeur {rang}."
   # Étoiles de chaque rang (Contributeur ★, ★★, ★★★).
   rangs:
@@ -249,9 +249,9 @@ sapin:
         - "&7Le 24 décembre à 20 h 30, l'étoile"
         - "&7s'allume et le feu d'artifice part."
       cadeau:
-        - "le titre Veillée 2026"
-        - "le titre Veillée 2026"
-        - "le titre Veillée 2026 et sa version étoilée"
+        - "le titre Veillée"
+        - "le titre Veillée"
+        - "le titre Veillée et sa version étoilée"
   menu:
     titre: "&8&lNoël &8| Grand Sapin"
     barre-pleine: "&a|"
@@ -310,7 +310,7 @@ sapin:
         - ""
         - "&7À &e{seuil} % &7le soir de la Veillée,"
         - "&7chaque contributeur reçoit le titre"
-        - "&eVeillée 2026&7."
+        - "&eVeillée&7."
     rang:
       nom: "&e&lContributeur {rang}"
       nom-aucun: "&7&lPas encore contributeur"
@@ -334,10 +334,10 @@ sapin:
       suivant-max:
         - "&7Encore &f{reste} &7points pour &e{suivant}&7,"
         - "&7tes cadeaux passent &ax{multiplicateur} &7et tu auras"
-        - "&7le titre &eVeillée 2026 étoilé&7."
+        - "&7le titre &eVeillée étoilé&7."
         - ""
       max:
-        - "&aRang maximum ! Le titre &eVeillée 2026"
+        - "&aRang maximum ! Le titre &eVeillée"
         - "&eétoilé &at'attend si le sapin brille"
         - "&apour la Veillée."
         - ""

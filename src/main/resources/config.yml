@@ -435,7 +435,7 @@ sapin:
         materiau: NETHER_STAR
       commandes-serveur:
         - 'function noel2026:sapin/p100'
-        - 'tm broadcast &2&lLe Grand Sapin brille\n&fTitre Veillée 2026 pour ses {contributeurs} contributeurs • /titres'
+        - 'tm broadcast &2&lLe Grand Sapin brille\n&fTitre Veillée pour ses {contributeurs} contributeurs • /titres'
         - 'sbc &2&lMerci aux décorateurs du Grand Sapin\n&fLes trois premiers sont &e{top1}&f, &e{top2} &fet &e{top3} • [/sapin]'
       commandes-contributeur:
         - 'lp user {joueur} permission set tag.veillee2026 true'
