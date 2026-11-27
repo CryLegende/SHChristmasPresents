@@ -63,6 +63,10 @@ flocons:
   # de boss…), au format des listes de récompenses. {montant} = Flocons vraiment versés ; rien quand rien n'est versé
   # (hors période de gains, plafond). Vide = rien.
   ligne-commande: "&8 • &b+{montant} Flocons ❄ &7(/flocons)"
+  # La même ligne pour une source précise ({source} de la commande), à la place de ligne-commande. Vide = rien.
+  lignes:
+    # Flocons du temps de jeu (JetsAntiAFKPro, toutes les 30 min) : la barre d'action suffit
+    temps: ""
   # Barre d'action d'un gain, par source ({montant} versé, {source} = nom ci-dessous). Vide = rien.
   gains:
     defaut: "&b+{montant} ❄ &7{source}"

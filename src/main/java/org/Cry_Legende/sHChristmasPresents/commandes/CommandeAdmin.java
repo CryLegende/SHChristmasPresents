@@ -147,7 +147,7 @@ public final class CommandeAdmin implements CommandExecutor, TabCompleter {
         Integer nombre = args.length >= 3 ? entier(args[2]) : Integer.valueOf(1);
         int n = nombre == null || nombre < 1 ? 1 : nombre;
         plugin.boules().donner(cible, n);
-        cible.sendMessage(m.mini("snowball_received"));
+        cible.sendMessage(m.mini("snowball_received", "%amount%", n, "%s%", n > 1 ? "s" : ""));
         if (!cible.equals(auteur)) {
             auteur.sendMessage(m.prefixe("give-done", "%player%", cible.getName(), "%amount%", String.valueOf(n)));
         }
@@ -205,7 +205,8 @@ public final class CommandeAdmin implements CommandExecutor, TabCompleter {
         // Ligne du bloc de récompense (quête, évènement, boss…) avec le montant vraiment versé, comme la ligne de SHCoins
         org.bukkit.entity.Player enLigne = Bukkit.getPlayer(cible.uuid());
         if (enLigne != null && verse > 0) {
-            m.envoyer(enLigne, "flocons.ligne-commande", "{montant}", verse);
+            String cle = m.existe("flocons.lignes." + source) ? "flocons.lignes." + source : "flocons.ligne-commande";
+            m.envoyer(enLigne, cle, "{montant}", verse);
         }
         retour(auteur, "admin.flocons-fait", "{joueur}", cible.pseudo(), "{verse}", verse, "{montant}", montant, "{source}", source);
     }

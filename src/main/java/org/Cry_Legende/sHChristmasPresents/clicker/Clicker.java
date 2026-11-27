@@ -486,7 +486,8 @@ public final class Clicker implements Listener {
                 Joueurs.donner(joueur, pile);
                 montant -= lot;
             }
-            joueur.sendMessage(MiniMessage.miniMessage().deserialize(niveauTexte.replace("%level%", String.valueOf(niveau))));
+            joueur.sendMessage(MiniMessage.miniMessage().deserialize(niveauTexte.replace("%level%", String.valueOf(niveau))
+                    .replace("%amount%", String.valueOf(recompense(niveau)))));
             joueur.playSound(joueur.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
         }
         plugin.carte().niveauClicker(joueur.getUniqueId(), joueur.getName(), niveau);

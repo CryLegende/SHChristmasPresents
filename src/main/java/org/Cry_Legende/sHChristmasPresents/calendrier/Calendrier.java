@@ -302,11 +302,13 @@ public final class Calendrier {
         Recompense recompense = recompenses.getOrDefault(porte, recompenseDefaut);
         String pseudo = joueur.getName();
         int verse = recompense.flocons() > 0 ? plugin.flocons().gagner(uuid, pseudo, recompense.flocons(), "porte", false) : 0;
-        Console.executer(plugin.getLogger(), recompense.commandes(), "{joueur}", pseudo, "{uuid}", uuid.toString(), "{porte}", porte);
+        // Titre du bloc de récompense d'abord : les commandes écrivent ensuite leurs lignes (clés, tokens…)
         String contenuCle = "calendrier.contenu." + porte;
         String contenu = messages.existe(contenuCle) ? messages.brut(contenuCle) : messages.brut("calendrier.contenu.defaut");
-        messages.envoyer(joueur, "calendrier.ouverte", "{porte}", porte, "{contenu}",
-                contenu.replace("{flocons}", Integer.toString(verse > 0 ? verse : recompense.flocons())));
+        int floconsAffiches = verse > 0 ? verse : recompense.flocons();
+        messages.envoyer(joueur, "calendrier.ouverte", "{porte}", porte, "{flocons}", floconsAffiches, "{contenu}",
+                contenu.replace("{flocons}", Integer.toString(floconsAffiches)));
+        Console.executer(plugin.getLogger(), recompense.commandes(), "{joueur}", pseudo, "{uuid}", uuid.toString(), "{porte}", porte);
         plugin.son(porte == porteSpeciale ? "porte-speciale" : "porte", joueur);
 
         int total = portes.nombre(uuid);
@@ -314,9 +316,9 @@ public final class Calendrier {
         plugin.carte().compteurChange(uuid, pseudo, "portes");
         List<String> palier = paliers.get(total);
         if (palier != null) {
-            Console.executer(plugin.getLogger(), palier, "{joueur}", pseudo, "{uuid}", uuid.toString(), "{portes}", total);
             String cle = "calendrier.paliers-contenu." + total;
             messages.envoyer(joueur, "calendrier.palier", "{n}", total, "{contenu}", messages.existe(cle) ? messages.brut(cle) : "");
+            Console.executer(plugin.getLogger(), palier, "{joueur}", pseudo, "{uuid}", uuid.toString(), "{portes}", total);
         }
         accueillir(joueur, "calendrier.bienvenue", false);
     }

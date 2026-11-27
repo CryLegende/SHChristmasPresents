@@ -811,9 +811,9 @@ public final class Sapin {
         for (String c : commandes) {
             finales.add(fois(c, r));
         }
-        Console.executer(plugin.getLogger(), finales, "{joueur}", joueur.getName(), "{uuid}", joueur.getUniqueId().toString(),
-                "{palier}", Integer.toString(palier.pourcent()), "{rang}", etoiles(r), "{multiplicateur}", r);
         String cadeau = cadeauPalier(palier, r);
+        Console.executer(plugin.getLogger(), finales, "{joueur}", joueur.getName(), "{uuid}", joueur.getUniqueId().toString(),
+                "{palier}", Integer.toString(palier.pourcent()), "{rang}", etoiles(r), "{multiplicateur}", r, "{cadeau}", cadeau);
         if (!cadeau.isEmpty()) {
             plugin.messages().envoyer(joueur, "sapin.palier-recu", "{palier}", palier.pourcent(), "{nom}", nomPalier(palier),
                     "{cadeau}", cadeau, "{rang}", etoiles(r));
