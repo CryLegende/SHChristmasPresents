@@ -202,6 +202,11 @@ public final class CommandeAdmin implements CommandExecutor, TabCompleter {
             return;
         }
         int verse = plugin.flocons().gagner(cible.uuid(), cible.pseudo(), montant, source, false);
+        // Ligne du bloc de récompense (quête, évènement, boss…) avec le montant vraiment versé, comme la ligne de SHCoins
+        org.bukkit.entity.Player enLigne = Bukkit.getPlayer(cible.uuid());
+        if (enLigne != null && verse > 0) {
+            m.envoyer(enLigne, "flocons.ligne-commande", "{montant}", verse);
+        }
         retour(auteur, "admin.flocons-fait", "{joueur}", cible.pseudo(), "{verse}", verse, "{montant}", montant, "{source}", source);
     }
 

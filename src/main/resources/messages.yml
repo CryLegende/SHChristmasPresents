@@ -59,6 +59,10 @@ village:
 # ---------------------------------------------------------------- Flocons
 
 flocons:
+  # Ligne de chat d'un gain donné par la commande « shchristmaspresents flocons » (récompense de quête, d'évènement,
+  # de boss…), au format des listes de récompenses. {montant} = Flocons vraiment versés ; rien quand rien n'est versé
+  # (hors période de gains, plafond). Vide = rien.
+  ligne-commande: "&8 • &b+{montant} Flocons ❄ &7(/flocons)"
   # Barre d'action d'un gain, par source ({montant} versé, {source} = nom ci-dessous). Vide = rien.
   gains:
     defaut: "&b+{montant} ❄ &7{source}"
